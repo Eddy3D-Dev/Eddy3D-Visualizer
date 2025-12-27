@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eddy3D Visualiser</title>
+  <link rel="stylesheet" href="/src/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <div id="ui-container">
+      <header>
+        <div class="logo-container">
+          <img src="/LogoEddy.png" alt="Eddy3D Logo" class="main-logo">
+        </div>
+      </header>
+      <section id="controls">
+
+        <div class="control-group">
+          <div class="select-container">
+            <label for="csv-upload" class="custom-file-upload">
+              Upload Results
+            </label>
+            <input type="file" id="csv-upload" accept=".csv">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>View Settings</h3>
+          <div class="toggle-item">
+            <span>Top View</span>
+            <label class="switch">
+              <input type="checkbox" id="top-view">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Auto-rotate</span>
+            <label class="switch">
+              <input type="checkbox" id="auto-rotate">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Perspective Mode</span>
+            <label class="switch">
+              <input type="checkbox" id="perspective-mode">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Grid</span>
+            <label class="switch">
+              <input type="checkbox" id="grid">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Show Buildings</span>
+            <label class="switch">
+              <input type="checkbox" id="show-buildings" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Show Edges</span>
+            <label class="switch">
+              <input type="checkbox" id="show-edges" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item">
+            <span>Point Size</span>
+            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" style="width: 100px;">
+          </div>
+          <div class="toggle-item">
+            <span>Colormap</span>
+            <select id="colormap-select"
+              style="width: 100px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <option value="turbo">Turbo</option>
+              <option value="jet" selected>Jet</option>
+              <option value="viridis">Viridis</option>
+              <option value="inferno">Inferno</option>
+              <option value="magma">Magma</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <div id="canvas-container"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
