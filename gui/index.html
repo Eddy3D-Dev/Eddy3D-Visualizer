@@ -25,10 +25,18 @@
 
         <div class="control-group">
           <div class="select-container">
-            <label for="csv-upload" class="custom-file-upload">
-              Upload Results
+
+            <label for="folder-upload" class="custom-file-upload" style="margin-left: 10px;">
+              Upload Folder
             </label>
-            <input type="file" id="csv-upload" accept=".csv">
+            <input type="file" id="folder-upload" webkitdirectory directory multiple>
+          </div>
+          <div class="select-container" style="margin-top: 10px;">
+            <label for="results-select">Results:</label>
+            <select id="results-select"
+              style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0; margin-top: 5px;">
+              <option value="" disabled selected>Select a result set...</option>
+            </select>
           </div>
         </div>
 

@@ -39,7 +39,8 @@ function getTurboColor(v: number): THREE.Color {
 let sensorPoints: THREE.Points | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
-const sensorData: { x: number, y: number, z: number, val: number, h: number }[] = [];
+let activeSensorData: { x: number, y: number, z: number, val: number, h: number }[] = [];
+const loadedDatasets = new Map<string, { x: number, y: number, z: number, val: number, h: number }[]>();
 let dataMin = 0;
 let dataMax = 1;
 
@@ -110,9 +111,7 @@ function processCSVData(text: string, name: string) {
       return;
     }
 
-    sensorData.length = 0; // Clear existing data
-    let minVal = Infinity;
-    let maxVal = -Infinity;
+    const newData: { x: number, y: number, z: number, val: number, h: number }[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const parts = lines[i].split(',');
@@ -125,163 +124,222 @@ function processCSVData(text: string, name: string) {
       const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
 
       if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-        sensorData.push({ x, y, z, val, h });
-        if (val < minVal) minVal = val;
-        if (val > maxVal) maxVal = val;
+        newData.push({ x, y, z, val, h });
       }
     }
 
-    // Update globals
-    dataMin = minVal;
-    dataMax = maxVal;
-
-    // Create Point Cloud
-    if (sensorPoints) {
-      scene.remove(sensorPoints);
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(sensorData.length * 3);
-    const colors = new Float32Array(sensorData.length * 3);
-
-    const mapName = (document.getElementById('colormap-select') as HTMLSelectElement)?.value || 'jet';
-
-    sensorData.forEach((d, i) => {
-      positions[i * 3] = d.x;
-      positions[i * 3 + 1] = d.y;
-      positions[i * 3 + 2] = d.z;
-
-      const normalized = (d.val - minVal) / (maxVal - minVal || 1);
-
-      let c: THREE.Color;
-      switch (mapName) {
-        case 'jet': c = getJetColor(normalized); break;
-        case 'viridis': c = getViridisColor(normalized); break;
-        case 'magma': c = getMagmaColor(normalized); break;
-        case 'inferno': c = getInfernoColor(normalized); break;
-        case 'turbo': default: c = getTurboColor(normalized); break;
+    if (newData.length > 0) {
+      loadedDatasets.set(name, newData);
+      updateResultsDropdown();
+      // Auto-select the first sorted option
+      const select = document.getElementById('results-select') as HTMLSelectElement;
+      if (select.options.length > 1) {
+        const firstSortedName = select.options[1].value;
+        select.value = firstSortedName;
+        renderDataset(firstSortedName);
       }
-
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
-    });
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-      size: (document.getElementById('point-size') as HTMLInputElement)?.value ? parseFloat((document.getElementById('point-size') as HTMLInputElement).value) : 10,
-      vertexColors: true,
-      sizeAttenuation: true
-    });
-
-    sensorPoints = new THREE.Points(geometry, material);
-    scene.add(sensorPoints);
-    console.log(`CSV Loaded: ${name}. Points: ${sensorData.length}`);
-
-    // Create Voxel City (Instanced Mesh)
-    if (buildingVoxels) {
-      scene.remove(buildingVoxels);
-      buildingVoxels = null;
     }
-    if (edgesVoxels) {
-      scene.remove(edgesVoxels);
-      edgesVoxels = null;
-    }
-
-    const validBuildings = sensorData.filter(d => d.h > 0);
-    if (validBuildings.length > 0) {
-      const boxGeo = new THREE.BoxGeometry(2, 2, 1); // Base 2x2m, height 1
-      const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      buildingVoxels = new THREE.InstancedMesh(boxGeo, boxMat, validBuildings.length);
-      // buildingVoxels.castShadow = true; // No shadows on Basic
-      // buildingVoxels.receiveShadow = true;
-
-      const dummy = new THREE.Object3D();
-      validBuildings.forEach((d, i) => {
-        dummy.position.set(d.x, d.y, d.h / 2); // Center of box is at h/2 so it sits on 0
-        dummy.scale.set(1, 1, d.h);
-        dummy.updateMatrix();
-        buildingVoxels!.setMatrixAt(i, dummy.matrix);
-      });
-
-      buildingVoxels.instanceMatrix.needsUpdate = true;
-      // Initial visibility based on toggle
-      const buildingToggle = document.getElementById('show-buildings') as HTMLInputElement;
-      buildingVoxels.visible = buildingToggle ? buildingToggle.checked : true;
-      scene.add(buildingVoxels);
-      console.log(`Voxel City created: ${validBuildings.length} buildings.`);
-
-      // Create Edges (Smart Filtering for Outline)
-      const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
-      const edgePositions: number[] = [];
-      const hMap = new Map<string, number>();
-
-      // Build Key: "x,y" (Assuming x,y are precise enough or integers)
-      // Note: sensorData likely has integer grid steps.
-      validBuildings.forEach(d => {
-        hMap.set(`${d.x},${d.y}`, d.h);
-      });
-
-      const getH = (x: number, y: number) => hMap.get(`${x},${y}`) || 0;
-
-      validBuildings.forEach(d => {
-        const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
-
-        const hN = getH(x, y + 2);
-        const hS = getH(x, y - 2);
-        const hE = getH(x + 2, y);
-        const hW = getH(x - 2, y);
-
-        // Top Rect (Draw if higher than neighbor)
-        if (h > hN) edgePositions.push(x - s, y + s, h, x + s, y + s, h);
-        if (h > hS) edgePositions.push(x - s, y - s, h, x + s, y - s, h);
-        if (h > hE) edgePositions.push(x + s, y - s, h, x + s, y + s, h);
-        if (h > hW) edgePositions.push(x - s, y - s, h, x - s, y + s, h);
-
-        // Bottom Rect (Draw if neighbor is missing/ground)
-        if (hN === 0) edgePositions.push(x - s, y + s, 0, x + s, y + s, 0);
-        if (hS === 0) edgePositions.push(x - s, y - s, 0, x + s, y - s, 0);
-        if (hE === 0) edgePositions.push(x + s, y - s, 0, x + s, y + s, 0);
-        if (hW === 0) edgePositions.push(x - s, y - s, 0, x - s, y + s, 0);
-
-        // Vertical Edges (Smart Corner Logic: !((h1!=h2) && !corner))
-        const checkCorner = (h1: boolean, h2: boolean, hCorner: boolean) => {
-          return !((h1 !== h2) && !hCorner) && !(h1 && h2 && hCorner);
-        };
-
-        // NE
-        const hNE = getH(x + 2, y + 2);
-        if (checkCorner(hN >= h, hE >= h, hNE >= h)) edgePositions.push(x + s, y + s, 0, x + s, y + s, h);
-
-        // NW
-        const hNW = getH(x - 2, y + 2);
-        if (checkCorner(hN >= h, hW >= h, hNW >= h)) edgePositions.push(x - s, y + s, 0, x - s, y + s, h);
-
-        // SE
-        const hSE = getH(x + 2, y - 2);
-        if (checkCorner(hS >= h, hE >= h, hSE >= h)) edgePositions.push(x + s, y - s, 0, x + s, y - s, h);
-
-        // SW
-        const hSW = getH(x - 2, y - 2);
-        if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
-      });
-
-      const edgesGeo = new THREE.BufferGeometry();
-      edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
-      edgesVoxels = new THREE.LineSegments(edgesGeo, edgesMat);
-
-      const edgesToggle = document.getElementById('show-edges') as HTMLInputElement;
-      edgesVoxels.visible = edgesToggle ? edgesToggle.checked : false;
-      scene.add(edgesVoxels);
-    }
-
-    // Zoom to fit if this is the first thing loaded or requested
-    zoomToFit();
   } catch (err) {
     console.error('Error processing CSV:', err);
   }
+}
+
+function updateResultsDropdown() {
+  const select = document.getElementById('results-select') as HTMLSelectElement;
+  // Keep the first disabled option
+  const firstOption = select.options[0];
+  select.innerHTML = '';
+  select.appendChild(firstOption);
+
+  const keys = Array.from(loadedDatasets.keys());
+
+  // Numerical Sort Attempt
+  keys.sort((a, b) => {
+    // Attempt to match numbers in the filename
+    const numA = a.match(/\d+/);
+    const numB = b.match(/\d+/);
+
+    if (numA && numB) {
+      const valA = parseInt(numA[0]);
+      const valB = parseInt(numB[0]);
+      return valA - valB;
+    } else if (numA) {
+      return -1; // Numbers come first
+    } else if (numB) {
+      return 1;
+    } else {
+      return a.localeCompare(b);
+    }
+  });
+
+  keys.forEach((key) => {
+    const option = document.createElement('option');
+    option.value = key;
+    option.text = key;
+    select.appendChild(option);
+  });
+}
+
+function renderDataset(name: string) {
+  const data = loadedDatasets.get(name);
+  if (!data) return;
+
+  activeSensorData = data;
+
+  // Calculate Min/Max for this dataset
+  let minVal = Infinity;
+  let maxVal = -Infinity;
+  activeSensorData.forEach(d => {
+    if (d.val < minVal) minVal = d.val;
+    if (d.val > maxVal) maxVal = d.val;
+  });
+  dataMin = minVal;
+  dataMax = maxVal;
+
+  // Create Point Cloud
+  if (sensorPoints) {
+    scene.remove(sensorPoints);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(activeSensorData.length * 3);
+  const colors = new Float32Array(activeSensorData.length * 3);
+
+  const mapName = (document.getElementById('colormap-select') as HTMLSelectElement)?.value || 'jet';
+
+  activeSensorData.forEach((d, i) => {
+    positions[i * 3] = d.x;
+    positions[i * 3 + 1] = d.y;
+    positions[i * 3 + 2] = d.z;
+
+    const normalized = (d.val - minVal) / (maxVal - minVal || 1);
+
+    let c: THREE.Color;
+    switch (mapName) {
+      case 'jet': c = getJetColor(normalized); break;
+      case 'viridis': c = getViridisColor(normalized); break;
+      case 'magma': c = getMagmaColor(normalized); break;
+      case 'inferno': c = getInfernoColor(normalized); break;
+      case 'turbo': default: c = getTurboColor(normalized); break;
+    }
+
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  });
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const material = new THREE.PointsMaterial({
+    size: (document.getElementById('point-size') as HTMLInputElement)?.value ? parseFloat((document.getElementById('point-size') as HTMLInputElement).value) : 10,
+    vertexColors: true,
+    sizeAttenuation: true
+  });
+
+  sensorPoints = new THREE.Points(geometry, material);
+  scene.add(sensorPoints);
+  console.log(`Rendered: ${name}. Points: ${activeSensorData.length}`);
+
+  // Create Voxel City (Instanced Mesh)
+  if (buildingVoxels) {
+    scene.remove(buildingVoxels);
+    buildingVoxels = null;
+  }
+  if (edgesVoxels) {
+    scene.remove(edgesVoxels);
+    edgesVoxels = null;
+  }
+
+  const validBuildings = activeSensorData.filter(d => d.h > 0);
+  if (validBuildings.length > 0) {
+    const boxGeo = new THREE.BoxGeometry(2, 2, 1); // Base 2x2m, height 1
+    const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    buildingVoxels = new THREE.InstancedMesh(boxGeo, boxMat, validBuildings.length);
+    // buildingVoxels.castShadow = true; // No shadows on Basic
+    // buildingVoxels.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+    validBuildings.forEach((d, i) => {
+      dummy.position.set(d.x, d.y, d.h / 2); // Center of box is at h/2 so it sits on 0
+      dummy.scale.set(1, 1, d.h);
+      dummy.updateMatrix();
+      buildingVoxels!.setMatrixAt(i, dummy.matrix);
+    });
+
+    buildingVoxels.instanceMatrix.needsUpdate = true;
+    // Initial visibility based on toggle
+    const buildingToggle = document.getElementById('show-buildings') as HTMLInputElement;
+    buildingVoxels.visible = buildingToggle ? buildingToggle.checked : true;
+    scene.add(buildingVoxels);
+    console.log(`Voxel City created: ${validBuildings.length} buildings.`);
+
+    // Create Edges (Smart Filtering for Outline)
+    const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+    const edgePositions: number[] = [];
+    const hMap = new Map<string, number>();
+
+    // Build Key: "x,y" (Assuming x,y are precise enough or integers)
+    // Note: sensorData likely has integer grid steps.
+    validBuildings.forEach(d => {
+      hMap.set(`${d.x},${d.y}`, d.h);
+    });
+
+    const getH = (x: number, y: number) => hMap.get(`${x},${y}`) || 0;
+
+    validBuildings.forEach(d => {
+      const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
+
+      const hN = getH(x, y + 2);
+      const hS = getH(x, y - 2);
+      const hE = getH(x + 2, y);
+      const hW = getH(x - 2, y);
+
+      // Top Rect (Draw if higher than neighbor)
+      if (h > hN) edgePositions.push(x - s, y + s, h, x + s, y + s, h);
+      if (h > hS) edgePositions.push(x - s, y - s, h, x + s, y - s, h);
+      if (h > hE) edgePositions.push(x + s, y - s, h, x + s, y + s, h);
+      if (h > hW) edgePositions.push(x - s, y - s, h, x - s, y + s, h);
+
+      // Bottom Rect (Draw if neighbor is missing/ground)
+      if (hN === 0) edgePositions.push(x - s, y + s, 0, x + s, y + s, 0);
+      if (hS === 0) edgePositions.push(x - s, y - s, 0, x + s, y - s, 0);
+      if (hE === 0) edgePositions.push(x + s, y - s, 0, x + s, y + s, 0);
+      if (hW === 0) edgePositions.push(x - s, y - s, 0, x - s, y + s, 0);
+
+      // Vertical Edges (Smart Corner Logic: !((h1!=h2) && !corner))
+      const checkCorner = (h1: boolean, h2: boolean, hCorner: boolean) => {
+        return !((h1 !== h2) && !hCorner) && !(h1 && h2 && hCorner);
+      };
+
+      // NE
+      const hNE = getH(x + 2, y + 2);
+      if (checkCorner(hN >= h, hE >= h, hNE >= h)) edgePositions.push(x + s, y + s, 0, x + s, y + s, h);
+
+      // NW
+      const hNW = getH(x - 2, y + 2);
+      if (checkCorner(hN >= h, hW >= h, hNW >= h)) edgePositions.push(x - s, y + s, 0, x - s, y + s, h);
+
+      // SE
+      const hSE = getH(x + 2, y - 2);
+      if (checkCorner(hS >= h, hE >= h, hSE >= h)) edgePositions.push(x + s, y - s, 0, x + s, y - s, h);
+
+      // SW
+      const hSW = getH(x - 2, y - 2);
+      if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
+    });
+
+    const edgesGeo = new THREE.BufferGeometry();
+    edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+    edgesVoxels = new THREE.LineSegments(edgesGeo, edgesMat);
+
+    const edgesToggle = document.getElementById('show-edges') as HTMLInputElement;
+    edgesVoxels.visible = edgesToggle ? edgesToggle.checked : false;
+    scene.add(edgesVoxels);
+  }
+
+  // Zoom to fit if this is the first thing loaded or requested
+  zoomToFit();
 }
 
 
@@ -387,19 +445,33 @@ document.getElementById('point-size')?.addEventListener('input', (e) => {
 });
 
 // CSV Upload Listener
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      processCSVData(text, file.name);
-    };
-    reader.readAsText(file);
-    // Reset dropdown
-    const select = document.getElementById('results-select') as HTMLSelectElement;
-    if (select) select.value = "";
+const handleFileUpload = (files: FileList | null) => {
+  if (!files) return;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        processCSVData(text, file.name);
+      };
+      reader.readAsText(file);
+    }
   }
+};
+
+document.getElementById('csv-upload')?.addEventListener('change', (e) => {
+  handleFileUpload((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('folder-upload')?.addEventListener('change', (e) => {
+  handleFileUpload((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('results-select')?.addEventListener('change', (e) => {
+  const name = (e.target as HTMLSelectElement).value;
+  renderDataset(name);
 });
 
 document.getElementById('show-buildings')?.addEventListener('change', (e) => {
@@ -545,11 +617,11 @@ function getInfernoColor(t: number) { return lerpColor(t, infernoStops); }
 
 // Update function
 function updateSensorColors(mapName: string) {
-  if (!sensorPoints || sensorData.length === 0) return;
+  if (!sensorPoints || activeSensorData.length === 0) return;
 
   const colors = sensorPoints.geometry.attributes.color.array as Float32Array;
 
-  sensorData.forEach((d, i) => {
+  activeSensorData.forEach((d, i) => {
     const normalized = (d.val - dataMin) / (dataMax - dataMin || 1);
     let c: THREE.Color;
     switch (mapName) {
