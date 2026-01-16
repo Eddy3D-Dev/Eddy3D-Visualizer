@@ -106,8 +106,8 @@ function processCSVData(text: string, name: string) {
     const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
     const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height')); // Check for height
 
-    if (xIdx === -1 || yIdx === -1 || zIdx === -1 || valIdx === -1) {
-      console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx, valIdx });
+    if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
+      console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
       return;
     }
 
@@ -120,7 +120,7 @@ function processCSVData(text: string, name: string) {
       const x = parseFloat(parts[xIdx]);
       const y = parseFloat(parts[yIdx]);
       const z = parseFloat(parts[zIdx]);
-      const val = parseFloat(parts[valIdx]);
+      const val = valIdx !== -1 ? parseFloat(parts[valIdx]) : 0;
       const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
 
       if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
