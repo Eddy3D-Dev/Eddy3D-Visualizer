@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import './style.css';
+
+const PLACEHOLDER_NAME = 'ML_Basic_Test_0_0.csv';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf1f5f9);
 
@@ -453,6 +455,10 @@ const handleFileUpload = (files: FileList | null) => {
     if (file.name.toLowerCase().endsWith('.csv')) {
       const reader = new FileReader();
       reader.onload = (e) => {
+        // Remove placeholder if exists
+        if (loadedDatasets.has(PLACEHOLDER_NAME)) {
+          loadedDatasets.delete(PLACEHOLDER_NAME);
+        }
         const text = e.target?.result as string;
         processCSVData(text, file.name);
       };
@@ -553,7 +559,27 @@ function animate() {
 }
 
 // Start empty (Upload only)
-zoomToFit();
+// Start with Placeholder
+function loadPlaceholder() {
+  fetch(PLACEHOLDER_NAME)
+    .then(response => {
+      if (!response.ok) throw new Error("Placeholder not found");
+      return response.text();
+    })
+    .then(text => {
+      processCSVData(text, PLACEHOLDER_NAME);
+      // Explicitly select and render it
+      const select = document.getElementById('results-select') as HTMLSelectElement;
+      if (select) select.value = PLACEHOLDER_NAME;
+      renderDataset(PLACEHOLDER_NAME);
+    })
+    .catch(err => {
+      console.warn("Could not load placeholder:", err);
+      zoomToFit();
+    });
+}
+
+loadPlaceholder();
 animate();
 
 // --- Colormap Helpers ---
