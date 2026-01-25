@@ -26,10 +26,22 @@
         <div class="control-group">
           <div class="select-container">
 
-            <label for="folder-upload" class="custom-file-upload" style="margin-left: 10px;">
+            <label for="folder-upload" class="custom-file-upload">
               Upload Folder
             </label>
             <input type="file" id="folder-upload" webkitdirectory directory multiple>
+          </div>
+          <div class="select-container" style="margin-top: 10px;">
+            <div class="download-row">
+              <button id="download-screenshots" class="download-btn" disabled>
+                Download Screenshots
+              </button>
+              <select id="dpi-select" class="dpi-select">
+                <option value="100">100px</option>
+                <option value="150" selected>150px</option>
+                <option value="300">300px</option>
+              </select>
+            </div>
           </div>
           <div class="select-container" style="margin-top: 10px;">
             <label for="results-select">Results:</label>
