@@ -1094,3 +1094,20 @@ document.getElementById('advanced-toggle')?.addEventListener('click', function (
     }
   }
 });
+
+// Mobile Menu Toggle Logic
+const menuToggle = document.getElementById('menu-toggle');
+const uiContainer = document.getElementById('ui-container');
+
+menuToggle?.addEventListener('click', () => {
+  menuToggle.classList.toggle('open');
+  uiContainer?.classList.toggle('sidebar-open');
+});
+
+// Close sidebar when clicking outside (on canvas) if open
+canvasContainer.addEventListener('click', () => {
+  if (uiContainer?.classList.contains('sidebar-open')) {
+    menuToggle?.classList.remove('open');
+    uiContainer.classList.remove('sidebar-open');
+  }
+});
