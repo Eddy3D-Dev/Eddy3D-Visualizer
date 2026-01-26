@@ -194,9 +194,20 @@ function renderDataset(name: string) {
   activeSensorData = data;
 
   // Calculate Min/Max for this dataset
+  // Check for reference dataset (Actual vs Predicted)
+  let referenceData = data;
+  // Assuming naming convention: case_X_pred.csv corresponds to case_X.csv
+  if (name.toLowerCase().endsWith('_pred.csv')) {
+    const refName = name.replace(/_pred\.csv$/i, '.csv');
+    if (loadedDatasets.has(refName)) {
+      referenceData = loadedDatasets.get(refName)!;
+      console.log(`Using reference range from: ${refName}`);
+    }
+  }
+
   let minVal = Infinity;
   let maxVal = -Infinity;
-  activeSensorData.forEach(d => {
+  referenceData.forEach(d => {
     if (d.val < minVal) minVal = d.val;
     if (d.val > maxVal) maxVal = d.val;
   });
