@@ -223,21 +223,34 @@ function renderDataset(name: string) {
   const maxDisplay = document.getElementById('max-val-display') as HTMLElement;
 
   if (minSlider && maxSlider) {
-    const range = dataMax - dataMin;
+    // Determine slider bounds
+    // Slider min: at least 0, or lower if data is lower
+    const sliderMin = Math.min(0, dataMin);
+    // Slider max: at least 2, or higher if data is higher
+    const sliderMax = Math.max(2, dataMax);
+
+    const range = sliderMax - sliderMin;
     const step = range / 1000 || 0.01;
 
-    minSlider.min = dataMin.toString();
-    minSlider.max = dataMax.toString();
+    // Set Slider Attributes
+    minSlider.min = sliderMin.toString();
+    minSlider.max = sliderMax.toString();
     minSlider.step = step.toString();
-    minSlider.value = dataMin.toString();
+    // Default Value: 0
+    minSlider.value = "0";
 
-    maxSlider.min = dataMin.toString();
-    maxSlider.max = dataMax.toString();
+    maxSlider.min = sliderMin.toString();
+    maxSlider.max = sliderMax.toString();
     maxSlider.step = step.toString();
-    maxSlider.value = dataMax.toString();
+    // Default Value: 1
+    maxSlider.value = "1";
 
-    if (minDisplay) minDisplay.textContent = dataMin.toFixed(2);
-    if (maxDisplay) maxDisplay.textContent = dataMax.toFixed(2);
+    // Set Active State Variables
+    userMin = 0;
+    userMax = 1;
+
+    if (minDisplay) minDisplay.textContent = userMin.toFixed(2);
+    if (maxDisplay) maxDisplay.textContent = userMax.toFixed(2);
   }
 
   // Create Point Cloud
