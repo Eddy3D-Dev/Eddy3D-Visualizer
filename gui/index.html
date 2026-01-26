@@ -112,6 +112,29 @@
             </select>
           </div>
         </div>
+
+        <div class="control-group">
+          <div class="collapsible-header" id="advanced-toggle">
+            <h3>Advanced</h3>
+            <span class="icon">▼</span>
+          </div>
+          <div class="collapsible-content" id="advanced-content" style="display: none;">
+            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
+              <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                <span>Min Value</span>
+                <span id="min-val-display" style="font-size: 0.8em; color: var(--text-secondary);">0</span>
+              </div>
+              <input type="range" id="colormap-min" style="width: 100%;">
+            </div>
+            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
+              <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                <span>Max Value</span>
+                <span id="max-val-display" style="font-size: 0.8em; color: var(--text-secondary);">1</span>
+              </div>
+              <input type="range" id="colormap-max" style="width: 100%;">
+            </div>
+          </div>
+        </div>
       </section>
 
     </div>

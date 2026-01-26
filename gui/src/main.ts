@@ -47,6 +47,8 @@ let activeSensorData: { x: number, y: number, z: number, val: number, h: number 
 const loadedDatasets = new Map<string, { x: number, y: number, z: number, val: number, h: number }[]>();
 let dataMin = 0;
 let dataMax = 1;
+let userMin = 0;
+let userMax = 1;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(width, height);
@@ -200,6 +202,32 @@ function renderDataset(name: string) {
   });
   dataMin = minVal;
   dataMax = maxVal;
+  userMin = dataMin;
+  userMax = dataMax;
+
+  // Update Sliders
+  const minSlider = document.getElementById('colormap-min') as HTMLInputElement;
+  const maxSlider = document.getElementById('colormap-max') as HTMLInputElement;
+  const minDisplay = document.getElementById('min-val-display') as HTMLElement;
+  const maxDisplay = document.getElementById('max-val-display') as HTMLElement;
+
+  if (minSlider && maxSlider) {
+    const range = dataMax - dataMin;
+    const step = range / 1000 || 0.01;
+
+    minSlider.min = dataMin.toString();
+    minSlider.max = dataMax.toString();
+    minSlider.step = step.toString();
+    minSlider.value = dataMin.toString();
+
+    maxSlider.min = dataMin.toString();
+    maxSlider.max = dataMax.toString();
+    maxSlider.step = step.toString();
+    maxSlider.value = dataMax.toString();
+
+    if (minDisplay) minDisplay.textContent = dataMin.toFixed(2);
+    if (maxDisplay) maxDisplay.textContent = dataMax.toFixed(2);
+  }
 
   // Create Point Cloud
   if (sensorPoints) {
@@ -217,7 +245,7 @@ function renderDataset(name: string) {
     positions[i * 3 + 1] = d.y;
     positions[i * 3 + 2] = d.z;
 
-    const normalized = (d.val - minVal) / (maxVal - minVal || 1);
+    const normalized = (d.val - userMin) / (userMax - userMin || 1);
 
     let c: THREE.Color;
     switch (mapName) {
@@ -651,7 +679,7 @@ function updateSensorColors(mapName: string) {
   const colors = sensorPoints.geometry.attributes.color.array as Float32Array;
 
   activeSensorData.forEach((d, i) => {
-    const normalized = (d.val - dataMin) / (dataMax - dataMin || 1);
+    const normalized = (d.val - userMin) / (userMax - userMin || 1);
     let c: THREE.Color;
     switch (mapName) {
       case 'jet': c = getJetColor(normalized); break;
@@ -1017,4 +1045,52 @@ function updateDownloadButton() {
 // Event listener for download button
 document.getElementById('download-screenshots')?.addEventListener('click', () => {
   captureAllScreenshots();
+});
+
+// Advanced Tab Colormap Slider Logic
+const updateRange = () => {
+  const minSlider = document.getElementById('colormap-min') as HTMLInputElement;
+  const maxSlider = document.getElementById('colormap-max') as HTMLInputElement;
+
+  if (!minSlider || !maxSlider) return;
+
+  let v1 = parseFloat(minSlider.value);
+  let v2 = parseFloat(maxSlider.value);
+
+  // Simple clamp to prevent crossing
+  if (v1 > v2) {
+    if (document.activeElement === minSlider) {
+      minSlider.value = v2.toString();
+      v1 = v2;
+    } else {
+      maxSlider.value = v1.toString();
+      v2 = v1;
+    }
+  }
+
+  userMin = v1;
+  userMax = v2;
+
+  const minDisplay = document.getElementById('min-val-display');
+  const maxDisplay = document.getElementById('max-val-display');
+  if (minDisplay) minDisplay.textContent = userMin.toFixed(2);
+  if (maxDisplay) maxDisplay.textContent = userMax.toFixed(2);
+
+  const mapName = (document.getElementById('colormap-select') as HTMLSelectElement).value;
+  updateSensorColors(mapName);
+};
+
+document.getElementById('colormap-min')?.addEventListener('input', updateRange);
+document.getElementById('colormap-max')?.addEventListener('input', updateRange);
+
+document.getElementById('advanced-toggle')?.addEventListener('click', function (this: HTMLElement) {
+  this.classList.toggle('active');
+  const content = document.getElementById('advanced-content');
+  if (content) {
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+    } else {
+      content.style.display = 'none';
+    }
+  }
 });
