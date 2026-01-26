@@ -580,6 +580,9 @@ window.addEventListener('resize', () => {
   orthographicCamera.top = maxDim;
   orthographicCamera.bottom = -maxDim;
   orthographicCamera.updateProjectionMatrix();
+
+  // Re-center view on resize
+  zoomToFit();
 });
 
 // Animation loop
