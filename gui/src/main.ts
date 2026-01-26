@@ -742,7 +742,7 @@ function setCameraTopView(): Promise<void> {
       const aspect = renderer.domElement.width / renderer.domElement.height;
       const sceneWidth = size.x;
       const sceneHeight = size.y;
-      const padding = 1.05; // 5% padding
+      const padding = 1.2; // 20% padding (Increased to prevent cropping)
 
       // Determine which dimension to fit
       const fitWidth = sceneWidth / aspect;
@@ -799,7 +799,7 @@ function setCameraPerspective(): Promise<void> {
 
       // Tight zoom for orthographic camera - use sceneSize not maxDim
       const aspect = renderer.domElement.width / renderer.domElement.height;
-      const padding = 1.05; // 5% padding
+      const padding = 1.2; // 20% padding
 
       orthographicCamera.left = -sceneSize * aspect * padding;
       orthographicCamera.right = sceneSize * aspect * padding;
