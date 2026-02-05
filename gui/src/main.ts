@@ -1,71 +1,42 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import './style.css';
+import { getColormapColor, type ColormapName } from './colormaps';
+import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
+import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
+import { 
+  captureAllScreenshots, 
+  updateDownloadButton,
+  type ScreenshotConfig 
+} from './screenshot';
 
 const PLACEHOLDER_NAME = 'ML_Basic_Test_0_0.csv';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf1f5f9);
 
 const canvasContainer = document.getElementById('canvas-container') as HTMLElement;
-const width = canvasContainer.clientWidth;
-const height = canvasContainer.clientHeight;
-const aspect = width / height;
 
-// Dual Camera setup
-const perspectiveCamera = new THREE.PerspectiveCamera(75, aspect, 0.1, 20000);
-perspectiveCamera.up.set(0, 0, 1);
+// Setup renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = false;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+canvasContainer.appendChild(renderer.domElement);
 
-const frustumSize = 1000;
-const orthographicCamera = new THREE.OrthographicCamera(
-  frustumSize * aspect / -2,
-  frustumSize * aspect / 2,
-  frustumSize / 2,
-  frustumSize / -2,
-  0.1,
-  20000
-);
-orthographicCamera.up.set(0, 0, 1);
+// Setup cameras
+const cameraSetup = setupCameras(canvasContainer, renderer);
+let { perspectiveCamera, orthographicCamera, activeCamera } = cameraSetup;
+let controls = cameraSetup.controls;
 
-let activeCamera: THREE.Camera = orthographicCamera; // Default to Axonometric (Orthographic)
-
-// Turbo Colormap implementation
-function getTurboColor(v: number): THREE.Color {
-  v = Math.max(0, Math.min(1, v));
-  const r = 34.61 + v * (198.21 + v * (-564.48 + v * (3302.08 + v * (-9526.58 + v * (13728.54 + v * (-9312.39 + v * 2399.13))))));
-  const g = -1.37 + v * (233.19 + v * (757.44 + v * (-2346.73 + v * (3410.83 + v * (-2368.12 + v * (486.63 + v * 153.22))))));
-  const b = 27.2 + v * (370.19 + v * (3167.31 + v * (-28166.37 + v * (88786.17 + v * (-141662.1 + v * (116488.0 + v * (-36818.27)))))));
-  return new THREE.Color(r / 255, g / 255, b / 255);
-}
-
-
+// Scene objects
 let sensorPoints: THREE.Points | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
-let activeSensorData: { x: number, y: number, z: number, val: number, h: number }[] = [];
-const loadedDatasets = new Map<string, { x: number, y: number, z: number, val: number, h: number }[]>();
+let activeSensorData: SensorDataPoint[] = [];
 let dataMin = 0;
 let dataMax = 1;
 let userMin = 0;
 let userMax = 1;
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(width, height);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = false; // Disable shadows as requested
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-canvasContainer.appendChild(renderer.domElement);
-
-// Controls
-let controls = new OrbitControls(activeCamera, renderer.domElement);
-controls.enableDamping = true;
-controls.mouseButtons = {
-  LEFT: THREE.MOUSE.ROTATE,
-  MIDDLE: THREE.MOUSE.PAN,
-  RIGHT: THREE.MOUSE.ROTATE
-};
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 1);
@@ -74,133 +45,68 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
 directionalLight.position.set(100, -100, 200);
 directionalLight.castShadow = true;
-
-// Shadow settings
 directionalLight.shadow.mapSize.width = 8192;
 directionalLight.shadow.mapSize.height = 8192;
 directionalLight.shadow.camera.near = 0.5;
 directionalLight.shadow.camera.far = 4000;
 directionalLight.shadow.bias = -0.0001;
-directionalLight.shadow.normalBias = 0.02; // Helps with shadow acne on flat surfaces
-
+directionalLight.shadow.normalBias = 0.02;
 scene.add(directionalLight);
 
 const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight2.position.set(-100, 100, -50);
 scene.add(directionalLight2);
 
-// Helpers
+// Grid helper
 const gridHelper = new THREE.GridHelper(2000, 40, 0xccd6e0, 0xdde4ed);
 gridHelper.rotation.x = Math.PI / 2;
 gridHelper.visible = false;
 scene.add(gridHelper);
 
+// CSV Loader
+const csvLoader = new CSVLoader(
+  () => {
+    updateResultsDropdownUI();
+    updateDownloadButtonUI();
+  }
+);
 
+function updateResultsDropdownUI() {
+  const select = document.getElementById('results-select') as HTMLSelectElement;
+  const firstOption = select.options[0];
+  const sortedNames = csvLoader.getSortedDatasetNames();
+  updateResultsDropdown(select, sortedNames, firstOption);
+}
+
+function updateDownloadButtonUI() {
+  const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
+  updateDownloadButton(downloadBtn, csvLoader.getDatasetCount());
+}
 
 function processCSVData(text: string, name: string) {
-  try {
-    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-    if (lines.length === 0) {
-      console.error('CSV is empty');
-      return;
-    }
-
-    const header = lines[0].split(',').map(h => h.trim());
-    const xIdx = header.findIndex(h => h.toLowerCase() === 'x');
-    const yIdx = header.findIndex(h => h.toLowerCase() === 'y');
-    const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
-    const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
-    const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height')); // Check for height
-
-    if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
-      console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
-      return;
-    }
-
-    const newData: { x: number, y: number, z: number, val: number, h: number }[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',');
-      if (parts.length <= Math.max(xIdx, yIdx, zIdx, valIdx)) continue;
-
-      const x = parseFloat(parts[xIdx]);
-      const y = parseFloat(parts[yIdx]);
-      const z = parseFloat(parts[zIdx]);
-      const val = valIdx !== -1 ? parseFloat(parts[valIdx]) : 0;
-      const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
-
-      if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-        newData.push({ x, y, z, val, h });
-      }
-    }
-
-    if (newData.length > 0) {
-      loadedDatasets.set(name, newData);
-      updateResultsDropdown();
-      updateDownloadButton();
-      // Auto-select the first sorted option
-      const select = document.getElementById('results-select') as HTMLSelectElement;
-      if (select.options.length > 1) {
-        const firstSortedName = select.options[1].value;
-        select.value = firstSortedName;
-        renderDataset(firstSortedName);
-      }
-    }
-  } catch (err) {
-    console.error('Error processing CSV:', err);
+  csvLoader.processCSVData(text, name);
+  
+  // Auto-select the first sorted option
+  const select = document.getElementById('results-select') as HTMLSelectElement;
+  if (select.options.length > 1) {
+    const firstSortedName = select.options[1].value;
+    select.value = firstSortedName;
+    renderDataset(firstSortedName);
   }
 }
 
-function updateResultsDropdown() {
-  const select = document.getElementById('results-select') as HTMLSelectElement;
-  // Keep the first disabled option
-  const firstOption = select.options[0];
-  select.innerHTML = '';
-  select.appendChild(firstOption);
-
-  const keys = Array.from(loadedDatasets.keys());
-
-  // Numerical Sort Attempt
-  keys.sort((a, b) => {
-    // Attempt to match numbers in the filename
-    const numA = a.match(/\d+/);
-    const numB = b.match(/\d+/);
-
-    if (numA && numB) {
-      const valA = parseInt(numA[0]);
-      const valB = parseInt(numB[0]);
-      return valA - valB;
-    } else if (numA) {
-      return -1; // Numbers come first
-    } else if (numB) {
-      return 1;
-    } else {
-      return a.localeCompare(b);
-    }
-  });
-
-  keys.forEach((key) => {
-    const option = document.createElement('option');
-    option.value = key;
-    option.text = key;
-    select.appendChild(option);
-  });
-}
-
 function renderDataset(name: string) {
-  const data = loadedDatasets.get(name);
+  const data = csvLoader.getDataset(name);
   if (!data) return;
 
   activeSensorData = data;
 
   // Calculate Min/Max for this dataset
-  // Check for reference dataset (Actual vs Predicted)
   let referenceData = data;
-  // Assuming naming convention: case_X_pred.csv corresponds to case_X.csv
   if (name.toLowerCase().endsWith('_pred.csv')) {
     const refName = name.replace(/_pred\.csv$/i, '.csv');
-    if (loadedDatasets.has(refName)) {
-      referenceData = loadedDatasets.get(refName)!;
+    if (csvLoader.hasDataset(refName)) {
+      referenceData = csvLoader.getDataset(refName)!;
       console.log(`Using reference range from: ${refName}`);
     }
   }
@@ -223,29 +129,21 @@ function renderDataset(name: string) {
   const maxDisplay = document.getElementById('max-val-display') as HTMLElement;
 
   if (minSlider && maxSlider) {
-    // Determine slider bounds
-    // Slider min: at least 0, or lower if data is lower
     const sliderMin = Math.min(0, dataMin);
-    // Slider max: at least 2, or higher if data is higher
     const sliderMax = Math.max(2, dataMax);
-
     const range = sliderMax - sliderMin;
     const step = range / 1000 || 0.01;
 
-    // Set Slider Attributes
     minSlider.min = sliderMin.toString();
     minSlider.max = sliderMax.toString();
     minSlider.step = step.toString();
-    // Default Value: 0
     minSlider.value = "0";
 
     maxSlider.min = sliderMin.toString();
     maxSlider.max = sliderMax.toString();
     maxSlider.step = step.toString();
-    // Default Value: 1
     maxSlider.value = "1";
 
-    // Set Active State Variables
     userMin = 0;
     userMax = 1;
 
@@ -270,15 +168,7 @@ function renderDataset(name: string) {
     positions[i * 3 + 2] = d.z;
 
     const normalized = (d.val - userMin) / (userMax - userMin || 1);
-
-    let c: THREE.Color;
-    switch (mapName) {
-      case 'jet': c = getJetColor(normalized); break;
-      case 'viridis': c = getViridisColor(normalized); break;
-      case 'magma': c = getMagmaColor(normalized); break;
-      case 'inferno': c = getInfernoColor(normalized); break;
-      case 'turbo': default: c = getTurboColor(normalized); break;
-    }
+    const c = getColormapColor(normalized, mapName as ColormapName);
 
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
@@ -310,154 +200,109 @@ function renderDataset(name: string) {
 
   const validBuildings = activeSensorData.filter(d => d.h > 0);
   if (validBuildings.length > 0) {
-    const boxGeo = new THREE.BoxGeometry(2, 2, 1); // Base 2x2m, height 1
+    const boxGeo = new THREE.BoxGeometry(2, 2, 1);
     const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     buildingVoxels = new THREE.InstancedMesh(boxGeo, boxMat, validBuildings.length);
-    // buildingVoxels.castShadow = true; // No shadows on Basic
-    // buildingVoxels.receiveShadow = true;
 
     const dummy = new THREE.Object3D();
     validBuildings.forEach((d, i) => {
-      dummy.position.set(d.x, d.y, d.h / 2); // Center of box is at h/2 so it sits on 0
+      dummy.position.set(d.x, d.y, d.h / 2);
       dummy.scale.set(1, 1, d.h);
       dummy.updateMatrix();
       buildingVoxels!.setMatrixAt(i, dummy.matrix);
     });
 
     buildingVoxels.instanceMatrix.needsUpdate = true;
-    // Initial visibility based on toggle
     const buildingToggle = document.getElementById('show-buildings') as HTMLInputElement;
     buildingVoxels.visible = buildingToggle ? buildingToggle.checked : true;
     scene.add(buildingVoxels);
     console.log(`Voxel City created: ${validBuildings.length} buildings.`);
 
     // Create Edges (Smart Filtering for Outline)
-    const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
-    const edgePositions: number[] = [];
-    const hMap = new Map<string, number>();
-
-    // Build Key: "x,y" (Assuming x,y are precise enough or integers)
-    // Note: sensorData likely has integer grid steps.
-    validBuildings.forEach(d => {
-      hMap.set(`${d.x},${d.y}`, d.h);
-    });
-
-    const getH = (x: number, y: number) => hMap.get(`${x},${y}`) || 0;
-
-    validBuildings.forEach(d => {
-      const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
-
-      const hN = getH(x, y + 2);
-      const hS = getH(x, y - 2);
-      const hE = getH(x + 2, y);
-      const hW = getH(x - 2, y);
-
-      // Top Rect (Draw if higher than neighbor)
-      if (h > hN) edgePositions.push(x - s, y + s, h, x + s, y + s, h);
-      if (h > hS) edgePositions.push(x - s, y - s, h, x + s, y - s, h);
-      if (h > hE) edgePositions.push(x + s, y - s, h, x + s, y + s, h);
-      if (h > hW) edgePositions.push(x - s, y - s, h, x - s, y + s, h);
-
-      // Bottom Rect (Draw if neighbor is missing/ground)
-      if (hN === 0) edgePositions.push(x - s, y + s, 0, x + s, y + s, 0);
-      if (hS === 0) edgePositions.push(x - s, y - s, 0, x + s, y - s, 0);
-      if (hE === 0) edgePositions.push(x + s, y - s, 0, x + s, y + s, 0);
-      if (hW === 0) edgePositions.push(x - s, y - s, 0, x - s, y + s, 0);
-
-      // Vertical Edges (Smart Corner Logic: !((h1!=h2) && !corner))
-      const checkCorner = (h1: boolean, h2: boolean, hCorner: boolean) => {
-        return !((h1 !== h2) && !hCorner) && !(h1 && h2 && hCorner);
-      };
-
-      // NE
-      const hNE = getH(x + 2, y + 2);
-      if (checkCorner(hN >= h, hE >= h, hNE >= h)) edgePositions.push(x + s, y + s, 0, x + s, y + s, h);
-
-      // NW
-      const hNW = getH(x - 2, y + 2);
-      if (checkCorner(hN >= h, hW >= h, hNW >= h)) edgePositions.push(x - s, y + s, 0, x - s, y + s, h);
-
-      // SE
-      const hSE = getH(x + 2, y - 2);
-      if (checkCorner(hS >= h, hE >= h, hSE >= h)) edgePositions.push(x + s, y - s, 0, x + s, y - s, h);
-
-      // SW
-      const hSW = getH(x - 2, y - 2);
-      if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
-    });
-
-    const edgesGeo = new THREE.BufferGeometry();
-    edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
-    edgesVoxels = new THREE.LineSegments(edgesGeo, edgesMat);
-
-    const edgesToggle = document.getElementById('show-edges') as HTMLInputElement;
-    edgesVoxels.visible = edgesToggle ? edgesToggle.checked : false;
-    scene.add(edgesVoxels);
+    createBuildingEdges(validBuildings);
   }
 
-  // Zoom to fit if this is the first thing loaded or requested
-  zoomToFit();
+  zoomToFit({
+    perspectiveCamera,
+    orthographicCamera,
+    activeCamera,
+    controls
+  }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
 }
 
+function createBuildingEdges(validBuildings: SensorDataPoint[]) {
+  const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+  const edgePositions: number[] = [];
+  const hMap = new Map<string, number>();
 
+  validBuildings.forEach(d => {
+    hMap.set(`${d.x},${d.y}`, d.h);
+  });
 
-function zoomToFit() {
-  const box = new THREE.Box3();
-  let hasMesh = false;
+  const getH = (x: number, y: number) => hMap.get(`${x},${y}`) || 0;
 
-  if (sensorPoints && sensorPoints.visible) {
-    box.expandByObject(sensorPoints);
-    hasMesh = true;
-  }
-  if (buildingVoxels && buildingVoxels.visible) {
-    box.expandByObject(buildingVoxels);
-    hasMesh = true;
-  }
+  validBuildings.forEach(d => {
+    const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
 
-  if (!hasMesh) return;
+    const hN = getH(x, y + 2);
+    const hS = getH(x, y - 2);
+    const hE = getH(x + 2, y);
+    const hW = getH(x - 2, y);
 
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
+    // Top Rect (Draw if higher than neighbor)
+    if (h > hN) edgePositions.push(x - s, y + s, h, x + s, y + s, h);
+    if (h > hS) edgePositions.push(x - s, y - s, h, x + s, y - s, h);
+    if (h > hE) edgePositions.push(x + s, y - s, h, x + s, y + s, h);
+    if (h > hW) edgePositions.push(x - s, y - s, h, x - s, y + s, h);
 
-  // Position cameras at a representative isometric angle
-  const distance = maxDim * 1.5;
-  const camPos = new THREE.Vector3(
-    center.x + distance,
-    center.y - distance,
-    center.z + distance
-  );
+    // Bottom Rect (Draw if neighbor is missing/ground)
+    if (hN === 0) edgePositions.push(x - s, y + s, 0, x + s, y + s, 0);
+    if (hS === 0) edgePositions.push(x - s, y - s, 0, x + s, y - s, 0);
+    if (hE === 0) edgePositions.push(x + s, y - s, 0, x + s, y + s, 0);
+    if (hW === 0) edgePositions.push(x - s, y - s, 0, x - s, y + s, 0);
 
-  // Update Perspective Camera
-  perspectiveCamera.position.copy(camPos);
-  perspectiveCamera.lookAt(center);
-  perspectiveCamera.far = distance * 10;
-  perspectiveCamera.updateProjectionMatrix();
+    // Vertical Edges (Smart Corner Logic)
+    const checkCorner = (h1: boolean, h2: boolean, hCorner: boolean) => {
+      return !((h1 !== h2) && !hCorner) && !(h1 && h2 && hCorner);
+    };
 
-  // Update Orthographic Camera
-  const aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
-  orthographicCamera.left = -maxDim * aspect;
-  orthographicCamera.right = maxDim * aspect;
-  orthographicCamera.top = maxDim;
-  orthographicCamera.bottom = -maxDim;
-  orthographicCamera.position.copy(camPos);
-  orthographicCamera.lookAt(center);
-  orthographicCamera.far = distance * 10;
-  orthographicCamera.updateProjectionMatrix();
+    const hNE = getH(x + 2, y + 2);
+    if (checkCorner(hN >= h, hE >= h, hNE >= h)) edgePositions.push(x + s, y + s, 0, x + s, y + s, h);
 
-  controls.target.copy(center);
-  controls.update();
+    const hNW = getH(x - 2, y + 2);
+    if (checkCorner(hN >= h, hW >= h, hNW >= h)) edgePositions.push(x - s, y + s, 0, x - s, y + s, h);
 
-  // Adjust shadow camera to tightly fit the scene
-  const shadowCam = directionalLight.shadow.camera;
-  shadowCam.left = -maxDim * 1.2;
-  shadowCam.right = maxDim * 1.2;
-  shadowCam.top = maxDim * 1.2;
-  shadowCam.bottom = -maxDim * 1.2;
-  shadowCam.updateProjectionMatrix();
+    const hSE = getH(x + 2, y - 2);
+    if (checkCorner(hS >= h, hE >= h, hSE >= h)) edgePositions.push(x + s, y - s, 0, x + s, y - s, h);
 
-  // Position light based on center
-  directionalLight.position.set(center.x + maxDim, center.y - maxDim, center.z + maxDim * 1.5);
+    const hSW = getH(x - 2, y - 2);
+    if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
+  });
+
+  const edgesGeo = new THREE.BufferGeometry();
+  edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+  edgesVoxels = new THREE.LineSegments(edgesGeo, edgesMat);
+
+  const edgesToggle = document.getElementById('show-edges') as HTMLInputElement;
+  edgesVoxels.visible = edgesToggle ? edgesToggle.checked : false;
+  scene.add(edgesVoxels);
+}
+
+function updateSensorColors(mapName: ColormapName) {
+  if (!sensorPoints || activeSensorData.length === 0) return;
+
+  const colors = sensorPoints.geometry.attributes.color.array as Float32Array;
+
+  activeSensorData.forEach((d, i) => {
+    const normalized = (d.val - userMin) / (userMax - userMin || 1);
+    const c = getColormapColor(normalized, mapName);
+
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  });
+
+  sensorPoints.geometry.attributes.color.needsUpdate = true;
 }
 
 // UI Event Listeners
@@ -467,67 +312,23 @@ document.getElementById('auto-rotate')?.addEventListener('change', (e) => {
 
 document.getElementById('perspective-mode')?.addEventListener('change', (e) => {
   const isPerspective = (e.target as HTMLInputElement).checked;
-  const oldTarget = controls.target.clone();
-
-  if (isPerspective) {
-    activeCamera = perspectiveCamera;
-  } else {
-    activeCamera = orthographicCamera;
-  }
-
-  // Transfer controls to new camera
-  const oldCamPos = controls.object.position.clone();
-  controls.dispose();
-  controls = new OrbitControls(activeCamera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.mouseButtons = {
-    LEFT: THREE.MOUSE.ROTATE,
-    MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: THREE.MOUSE.ROTATE
-  };
-  controls.target.copy(oldTarget);
-  activeCamera.position.copy(oldCamPos);
-  controls.update();
+  controls = switchCamera(isPerspective, {
+    perspectiveCamera,
+    orthographicCamera,
+    activeCamera,
+    controls
+  }, renderer);
+  activeCamera = isPerspective ? perspectiveCamera : orthographicCamera;
 });
 
 document.getElementById('grid')?.addEventListener('change', (e) => {
   gridHelper.visible = (e.target as HTMLInputElement).checked;
 });
 
-
 document.getElementById('point-size')?.addEventListener('input', (e) => {
   if (sensorPoints) {
     (sensorPoints.material as THREE.PointsMaterial).size = parseFloat((e.target as HTMLInputElement).value);
   }
-});
-
-// CSV Upload Listener
-const handleFileUpload = (files: FileList | null) => {
-  if (!files) return;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (file.name.toLowerCase().endsWith('.csv')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        // Remove placeholder if exists
-        if (loadedDatasets.has(PLACEHOLDER_NAME)) {
-          loadedDatasets.delete(PLACEHOLDER_NAME);
-        }
-        const text = e.target?.result as string;
-        processCSVData(text, file.name);
-      };
-      reader.readAsText(file);
-    }
-  }
-};
-
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files);
-});
-
-document.getElementById('folder-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files);
 });
 
 document.getElementById('results-select')?.addEventListener('change', (e) => {
@@ -573,40 +374,40 @@ document.getElementById('top-view')?.addEventListener('change', (e) => {
     }
   }
 
-  // Lock rotation if Top View is active
   controls.enableRotate = !isTop;
   controls.update();
 });
 
+// CSV Upload Listener
+document.getElementById('csv-upload')?.addEventListener('change', (e) => {
+  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
+    // Remove placeholder if exists
+    if (csvLoader.hasDataset(PLACEHOLDER_NAME)) {
+      csvLoader.deleteDataset(PLACEHOLDER_NAME);
+    }
+    processCSVData(text, name);
+  });
+});
+
+document.getElementById('folder-upload')?.addEventListener('change', (e) => {
+  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
+    if (csvLoader.hasDataset(PLACEHOLDER_NAME)) {
+      csvLoader.deleteDataset(PLACEHOLDER_NAME);
+    }
+    processCSVData(text, name);
+  });
+});
+
 // Resize handle
 window.addEventListener('resize', () => {
-  const w = canvasContainer.clientWidth;
-  const h = canvasContainer.clientHeight;
-  const aspect = w / h;
-
-  renderer.setSize(w, h);
-
-  perspectiveCamera.aspect = aspect;
-  perspectiveCamera.updateProjectionMatrix();
-
-  const box = new THREE.Box3();
-  if (sensorPoints && sensorPoints.visible) {
-    box.expandByObject(sensorPoints);
-  }
-  if (buildingVoxels && buildingVoxels.visible) {
-    box.expandByObject(buildingVoxels);
-  }
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z) || 1000;
-
-  orthographicCamera.left = -maxDim * aspect;
-  orthographicCamera.right = maxDim * aspect;
-  orthographicCamera.top = maxDim;
-  orthographicCamera.bottom = -maxDim;
-  orthographicCamera.updateProjectionMatrix();
-
-  // Re-center view on resize
-  zoomToFit();
+  updateCameraOnResize(
+    { perspectiveCamera, orthographicCamera, activeCamera, controls },
+    renderer,
+    canvasContainer,
+    sensorPoints,
+    buildingVoxels,
+    () => zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight)
+  );
 });
 
 // Animation loop
@@ -616,8 +417,8 @@ function animate() {
   renderer.render(scene, activeCamera);
 }
 
-// Start empty (Upload only)
-// Start with Placeholder
+// Load placeholder
+csvLoader.processCSVData
 function loadPlaceholder() {
   fetch(PLACEHOLDER_NAME)
     .then(response => {
@@ -625,453 +426,21 @@ function loadPlaceholder() {
       return response.text();
     })
     .then(text => {
-      processCSVData(text, PLACEHOLDER_NAME);
-      // Explicitly select and render it
+      csvLoader.processCSVData(text, PLACEHOLDER_NAME);
       const select = document.getElementById('results-select') as HTMLSelectElement;
       if (select) select.value = PLACEHOLDER_NAME;
       renderDataset(PLACEHOLDER_NAME);
     })
     .catch(err => {
       console.warn("Could not load placeholder:", err);
-      zoomToFit();
+      zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
     });
 }
 
-loadPlaceholder();
-animate();
-
-// --- Colormap Helpers ---
-
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
-
-function lerpColor(t: number, stops: { t: number, r: number, g: number, b: number }[]) {
-  if (t <= stops[0].t) return new THREE.Color(stops[0].r, stops[0].g, stops[0].b);
-  if (t >= stops[stops.length - 1].t) return new THREE.Color(stops[stops.length - 1].r, stops[stops.length - 1].g, stops[stops.length - 1].b);
-
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (t >= stops[i].t && t <= stops[i + 1].t) {
-      const localT = (t - stops[i].t) / (stops[i + 1].t - stops[i].t);
-      return new THREE.Color(
-        lerp(stops[i].r, stops[i + 1].r, localT),
-        lerp(stops[i].g, stops[i + 1].g, localT),
-        lerp(stops[i].b, stops[i + 1].b, localT)
-      );
-    }
-  }
-  return new THREE.Color(0, 0, 0);
-}
-
-function getJetColor(t: number) {
-  // Simple Jet approximation
-  const r = Math.min(1, Math.max(0, 1.5 - Math.abs(t * 4 - 3)));
-  const g = Math.min(1, Math.max(0, 1.5 - Math.abs(t * 4 - 2)));
-  const b = Math.min(1, Math.max(0, 1.5 - Math.abs(t * 4 - 1)));
-  return new THREE.Color(r, g, b);
-}
-
-// Approximations for Viridis/Magma/Inferno using stops
-const viridisStops = [
-  { t: 0.0, r: 0.267, g: 0.004, b: 0.329 }, // 440154
-  { t: 0.25, r: 0.229, g: 0.322, b: 0.545 }, // 3b528b
-  { t: 0.5, r: 0.128, g: 0.567, b: 0.551 }, // 21918c
-  { t: 0.75, r: 0.369, g: 0.787, b: 0.383 }, // 5ec962
-  { t: 1.0, r: 0.993, g: 0.906, b: 0.144 }  // fde725
-];
-function getViridisColor(t: number) { return lerpColor(t, viridisStops); }
-
-const magmaStops = [
-  { t: 0.0, r: 0.001, g: 0.000, b: 0.013 }, // 000004
-  { t: 0.25, r: 0.316, g: 0.092, b: 0.418 }, // 51127c
-  { t: 0.5, r: 0.716, g: 0.211, b: 0.368 }, // b73779
-  { t: 0.75, r: 0.986, g: 0.549, b: 0.296 }, // fc8d59
-  { t: 1.0, r: 0.988, g: 0.998, b: 0.749 }  // fcfdbf
-];
-function getMagmaColor(t: number) { return lerpColor(t, magmaStops); }
-
-const infernoStops = [
-  { t: 0.0, r: 0.001, g: 0.000, b: 0.013 }, // 000004
-  { t: 0.25, r: 0.347, g: 0.057, b: 0.406 }, // 5709ce (approx)
-  { t: 0.5, r: 0.730, g: 0.193, b: 0.279 }, // bb3754
-  { t: 0.75, r: 0.963, g: 0.575, b: 0.116 }, // f98e09
-  { t: 1.0, r: 0.988, g: 0.998, b: 0.643 }  // fcffa4
-];
-function getInfernoColor(t: number) { return lerpColor(t, infernoStops); }
-
-// Update function
-function updateSensorColors(mapName: string) {
-  if (!sensorPoints || activeSensorData.length === 0) return;
-
-  const colors = sensorPoints.geometry.attributes.color.array as Float32Array;
-
-  activeSensorData.forEach((d, i) => {
-    const normalized = (d.val - userMin) / (userMax - userMin || 1);
-    let c: THREE.Color;
-    switch (mapName) {
-      case 'jet': c = getJetColor(normalized); break;
-      case 'viridis': c = getViridisColor(normalized); break;
-      case 'magma': c = getMagmaColor(normalized); break;
-      case 'inferno': c = getInfernoColor(normalized); break;
-      case 'turbo': default: c = getTurboColor(normalized); break;
-    }
-
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-  });
-
-  sensorPoints.geometry.attributes.color.needsUpdate = true;
-}
-
+// Colormap events
 document.getElementById('colormap-select')?.addEventListener('change', (e) => {
   const mapName = (e.target as HTMLSelectElement).value;
-  updateSensorColors(mapName);
-});
-
-// ========== SCREEN GRAB FUNCTIONALITY ==========
-
-// Helper: Position camera for Top View with tight zoom
-function setCameraTopView(): Promise<void> {
-  return new Promise((resolve) => {
-    const box = new THREE.Box3();
-    if (sensorPoints) box.expandByObject(sensorPoints);
-    if (buildingVoxels) box.expandByObject(buildingVoxels);
-
-    if (!box.isEmpty()) {
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxZ = Math.max(size.z, 10);
-
-      // Position camera directly above, looking down
-      activeCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
-      activeCamera.lookAt(center);
-      activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-      controls.enableRotate = false;
-      controls.update();
-
-      // Tight zoom: use actual scene width/height for orthographic bounds
-      const aspect = renderer.domElement.width / renderer.domElement.height;
-      const sceneWidth = size.x;
-      const sceneHeight = size.y;
-      const padding = 1.2; // 20% padding (Increased to prevent cropping)
-
-      // Determine which dimension to fit
-      const fitWidth = sceneWidth / aspect;
-      const fitHeight = sceneHeight;
-      const fitDim = Math.max(fitWidth, fitHeight) * padding;
-
-      orthographicCamera.left = -fitDim * aspect / 2;
-      orthographicCamera.right = fitDim * aspect / 2;
-      orthographicCamera.top = fitDim / 2;
-      orthographicCamera.bottom = -fitDim / 2;
-      orthographicCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
-      orthographicCamera.lookAt(center);
-      orthographicCamera.updateProjectionMatrix();
-
-      // Also update perspective camera if that's active
-      if (activeCamera instanceof THREE.PerspectiveCamera) {
-        const dist = Math.max(sceneWidth, sceneHeight) * 1.2;
-        activeCamera.position.set(center.x, center.y - 0.001, center.z + dist);
-        activeCamera.lookAt(center);
-        activeCamera.updateProjectionMatrix();
-      }
-    }
-
-    // Wait for render to complete
-    requestAnimationFrame(() => {
-      renderer.render(scene, activeCamera);
-      resolve();
-    });
-  });
-}
-
-// Helper: Position camera for Perspective (Isometric) View with tight zoom
-function setCameraPerspective(): Promise<void> {
-  return new Promise((resolve) => {
-    const box = new THREE.Box3();
-    if (sensorPoints) box.expandByObject(sensorPoints);
-    if (buildingVoxels) box.expandByObject(buildingVoxels);
-
-    if (!box.isEmpty()) {
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-
-      // Use half of maxDim for tighter framing in isometric view
-      const sceneSize = Math.max(size.x, size.y) * 0.5;
-
-      // Position camera at isometric angle - closer
-      const dist = sceneSize * 1.5;
-      activeCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
-      activeCamera.lookAt(center);
-      activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-      controls.enableRotate = true;
-      controls.update();
-
-      // Tight zoom for orthographic camera - use sceneSize not maxDim
-      const aspect = renderer.domElement.width / renderer.domElement.height;
-      const padding = 1.2; // 20% padding
-
-      orthographicCamera.left = -sceneSize * aspect * padding;
-      orthographicCamera.right = sceneSize * aspect * padding;
-      orthographicCamera.top = sceneSize * padding;
-      orthographicCamera.bottom = -sceneSize * padding;
-      orthographicCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
-      orthographicCamera.lookAt(center);
-      orthographicCamera.updateProjectionMatrix();
-
-      // Also update perspective camera
-      if (activeCamera instanceof THREE.PerspectiveCamera) {
-        activeCamera.updateProjectionMatrix();
-      }
-    }
-
-    // Wait for render to complete
-    requestAnimationFrame(() => {
-      renderer.render(scene, activeCamera);
-      resolve();
-    });
-  });
-}
-
-// Helper: Capture current canvas as blob
-function captureScreenshot(): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    renderer.render(scene, activeCamera);
-    renderer.domElement.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error('Failed to capture screenshot'));
-      }
-    }, 'image/png');
-  });
-}
-
-// Main function: Capture all screenshots and create ZIP
-async function captureAllScreenshots() {
-  const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
-  const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement;
-  const originalText = downloadBtn.textContent;
-
-  // Get selected resolution (multiply by 10 to get actual pixels: 100->1000, 150->1500, 300->3000)
-  const targetSize = parseInt(dpiSelect.value) * 10;
-
-  // Store original canvas size and pixel ratio
-  const originalWidth = canvasContainer.clientWidth;
-  const originalHeight = canvasContainer.clientHeight;
-  const originalPixelRatio = renderer.getPixelRatio();
-
-  try {
-    downloadBtn.classList.add('loading');
-    downloadBtn.textContent = 'Capturing...';
-    downloadBtn.disabled = true;
-
-    // Set pixel ratio to 1 for consistent output size
-    renderer.setPixelRatio(1);
-
-    // Resize renderer to target resolution (square for consistent output)
-    renderer.setSize(targetSize, targetSize);
-
-    const zip = new JSZip();
-    const topViewFolder = zip.folder('Top View');
-    const perspectiveFolder = zip.folder('Perspective');
-
-    if (!topViewFolder || !perspectiveFolder) {
-      throw new Error('Failed to create ZIP folders');
-    }
-
-    const datasetNames = Array.from(loadedDatasets.keys());
-
-    // Identify paired files (base + _pred)
-    const processedNames = new Set<string>();
-    const pairs: { base: string; pred: string | null; outputName: string }[] = [];
-
-    for (const name of datasetNames) {
-      if (processedNames.has(name)) continue;
-
-      const baseName = name.replace(/\.csv$/i, '');
-
-      // Check if this is a _pred file
-      if (baseName.endsWith('_pred')) {
-        const originalBaseName = baseName.slice(0, -5); // Remove '_pred'
-        const originalName = `${originalBaseName}.csv`;
-
-        // Check if original exists
-        if (loadedDatasets.has(originalName)) {
-          // Will be handled when we process the original
-          continue;
-        } else {
-          // Standalone _pred file
-          pairs.push({ base: name, pred: null, outputName: baseName });
-          processedNames.add(name);
-        }
-      } else {
-        // Check if _pred version exists
-        const predName = `${baseName}_pred.csv`;
-        if (loadedDatasets.has(predName)) {
-          pairs.push({ base: name, pred: predName, outputName: baseName });
-          processedNames.add(name);
-          processedNames.add(predName);
-        } else {
-          // Standalone file
-          pairs.push({ base: name, pred: null, outputName: baseName });
-          processedNames.add(name);
-        }
-      }
-    }
-
-    const total = pairs.length;
-
-    // Helper to merge two blobs side by side
-    async function mergeImagesSideBySide(leftBlob: Blob, rightBlob: Blob): Promise<Blob> {
-      return new Promise((resolve, reject) => {
-        const leftImg = new Image();
-        const rightImg = new Image();
-        let loadedCount = 0;
-
-        const onLoad = () => {
-          loadedCount++;
-          if (loadedCount === 2) {
-            const canvas = document.createElement('canvas');
-            canvas.width = leftImg.width + rightImg.width;
-            canvas.height = Math.max(leftImg.height, rightImg.height);
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('Failed to get canvas context'));
-              return;
-            }
-            ctx.fillStyle = '#f1f5f9'; // Background color
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(leftImg, 0, 0);
-            ctx.drawImage(rightImg, leftImg.width, 0);
-            canvas.toBlob((blob) => {
-              if (blob) resolve(blob);
-              else reject(new Error('Failed to create merged image'));
-            }, 'image/png');
-          }
-        };
-
-        leftImg.onload = onLoad;
-        rightImg.onload = onLoad;
-        leftImg.onerror = () => reject(new Error('Failed to load left image'));
-        rightImg.onerror = () => reject(new Error('Failed to load right image'));
-
-        leftImg.src = URL.createObjectURL(leftBlob);
-        rightImg.src = URL.createObjectURL(rightBlob);
-      });
-    }
-
-    for (let i = 0; i < pairs.length; i++) {
-      const pair = pairs[i];
-      downloadBtn.textContent = `Capturing ${i + 1}/${total}...`;
-
-      if (pair.pred) {
-        // === PAIRED FILES: Capture both and merge ===
-
-        // Capture base - Top View
-        renderDataset(pair.base);
-        await new Promise(r => setTimeout(r, 100));
-        await setCameraTopView();
-        await new Promise(r => setTimeout(r, 50));
-        const baseTopBlob = await captureScreenshot();
-
-        // Capture pred - Top View
-        renderDataset(pair.pred);
-        await new Promise(r => setTimeout(r, 100));
-        await setCameraTopView();
-        await new Promise(r => setTimeout(r, 50));
-        const predTopBlob = await captureScreenshot();
-
-        // Merge Top Views side by side
-        const mergedTopBlob = await mergeImagesSideBySide(baseTopBlob, predTopBlob);
-        topViewFolder.file(`${pair.outputName}_comparison.png`, mergedTopBlob);
-
-        // Capture base - Perspective
-        renderDataset(pair.base);
-        await new Promise(r => setTimeout(r, 100));
-        await setCameraPerspective();
-        await new Promise(r => setTimeout(r, 50));
-        const basePerspBlob = await captureScreenshot();
-
-        // Capture pred - Perspective
-        renderDataset(pair.pred);
-        await new Promise(r => setTimeout(r, 100));
-        await setCameraPerspective();
-        await new Promise(r => setTimeout(r, 50));
-        const predPerspBlob = await captureScreenshot();
-
-        // Merge Perspective Views side by side
-        const mergedPerspBlob = await mergeImagesSideBySide(basePerspBlob, predPerspBlob);
-        perspectiveFolder.file(`${pair.outputName}_comparison.png`, mergedPerspBlob);
-
-      } else {
-        // === SINGLE FILE: Capture as before ===
-        renderDataset(pair.base);
-        await new Promise(r => setTimeout(r, 100));
-
-        // Capture Top View
-        await setCameraTopView();
-        await new Promise(r => setTimeout(r, 50));
-        const topViewBlob = await captureScreenshot();
-        topViewFolder.file(`${pair.outputName}.png`, topViewBlob);
-
-        // Capture Perspective View
-        await setCameraPerspective();
-        await new Promise(r => setTimeout(r, 50));
-        const perspectiveBlob = await captureScreenshot();
-        perspectiveFolder.file(`${pair.outputName}.png`, perspectiveBlob);
-      }
-    }
-
-    downloadBtn.textContent = 'Creating ZIP...';
-
-    // Generate and download ZIP
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    saveAs(zipBlob, 'screenshots.zip');
-
-    // Restore original canvas size and pixel ratio
-    renderer.setPixelRatio(originalPixelRatio);
-    renderer.setSize(originalWidth, originalHeight);
-    zoomToFit();
-
-    downloadBtn.textContent = '✓ Downloaded!';
-    setTimeout(() => {
-      downloadBtn.textContent = originalText;
-      downloadBtn.disabled = loadedDatasets.size === 0;
-      downloadBtn.classList.remove('loading');
-    }, 2000);
-
-  } catch (error) {
-    console.error('Screenshot capture failed:', error);
-
-    // Restore original canvas size and pixel ratio on error
-    renderer.setPixelRatio(originalPixelRatio);
-    renderer.setSize(originalWidth, originalHeight);
-    zoomToFit();
-
-    downloadBtn.textContent = '✗ Failed';
-    setTimeout(() => {
-      downloadBtn.textContent = originalText;
-      downloadBtn.disabled = loadedDatasets.size === 0;
-      downloadBtn.classList.remove('loading');
-    }, 2000);
-  }
-}
-
-// Enable/disable download button based on loaded datasets
-function updateDownloadButton() {
-  const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
-  if (downloadBtn) {
-    downloadBtn.disabled = loadedDatasets.size === 0;
-  }
-}
-
-// Event listener for download button
-document.getElementById('download-screenshots')?.addEventListener('click', () => {
-  captureAllScreenshots();
+  updateSensorColors(mapName as ColormapName);
 });
 
 // Advanced Tab Colormap Slider Logic
@@ -1084,7 +453,6 @@ const updateRange = () => {
   let v1 = parseFloat(minSlider.value);
   let v2 = parseFloat(maxSlider.value);
 
-  // Simple clamp to prevent crossing
   if (v1 > v2) {
     if (document.activeElement === minSlider) {
       minSlider.value = v2.toString();
@@ -1104,7 +472,7 @@ const updateRange = () => {
   if (maxDisplay) maxDisplay.textContent = userMax.toFixed(2);
 
   const mapName = (document.getElementById('colormap-select') as HTMLSelectElement).value;
-  updateSensorColors(mapName);
+  updateSensorColors(mapName as ColormapName);
 };
 
 document.getElementById('colormap-min')?.addEventListener('input', updateRange);
@@ -1114,11 +482,7 @@ document.getElementById('advanced-toggle')?.addEventListener('click', function (
   this.classList.toggle('active');
   const content = document.getElementById('advanced-content');
   if (content) {
-    if (content.style.display === 'none') {
-      content.style.display = 'block';
-    } else {
-      content.style.display = 'none';
-    }
+    content.style.display = content.style.display === 'none' ? 'block' : 'none';
   }
 });
 
@@ -1131,10 +495,36 @@ menuToggle?.addEventListener('click', () => {
   uiContainer?.classList.toggle('sidebar-open');
 });
 
-// Close sidebar when clicking outside (on canvas) if open
+// Close sidebar when clicking outside
 canvasContainer.addEventListener('click', () => {
   if (uiContainer?.classList.contains('sidebar-open')) {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
   }
 });
+
+// Screenshot download
+document.getElementById('download-screenshots')?.addEventListener('click', () => {
+  const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
+  const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement;
+  const originalWidth = canvasContainer.clientWidth;
+  const originalHeight = canvasContainer.clientHeight;
+  const originalPixelRatio = renderer.getPixelRatio();
+
+  const config: ScreenshotConfig = {
+    canvasContainer,
+    renderer,
+    cameras: { perspectiveCamera, orthographicCamera, activeCamera, controls },
+    controls,
+    sensorPoints,
+    buildingVoxels,
+    loadedDatasets: csvLoader.getAllDatasets(),
+    renderDataset,
+    zoomToFit: () => zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight)
+  };
+
+  captureAllScreenshots(config, scene, downloadBtn, dpiSelect, originalWidth, originalHeight, originalPixelRatio);
+});
+
+loadPlaceholder();
+animate();
