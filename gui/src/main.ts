@@ -39,7 +39,7 @@ let dataMax = 1;
 let userMin = 0;
 let userMax = 1;
 let gaplessPointSizingEnabled = true;
-let rotatePointsToCameraEnabled = true;
+let rotatePointsToCameraEnabled = false;
 let sensorGridStep = 2;
 const sensorCloudCenter = new THREE.Vector3();
 const projectionScratchA = new THREE.Vector3();
@@ -246,7 +246,7 @@ function persistViewSettings() {
     showEdges: showEdgesToggle?.checked ?? true,
     pointSize: Number.isFinite(pointSizeValue) ? pointSizeValue : DEFAULT_POINT_SIZE,
     gaplessPoints: gaplessToggle?.checked ?? true,
-    rotateToCamera: rotateToCameraToggle?.checked ?? true,
+    rotateToCamera: rotateToCameraToggle?.checked ?? false,
     colormap: savedColormap
   };
 
@@ -360,7 +360,7 @@ function applyPersistedViewSettings() {
   }
 
   gaplessPointSizingEnabled = gaplessToggle?.checked ?? true;
-  rotatePointsToCameraEnabled = rotateToCameraToggle?.checked ?? true;
+  rotatePointsToCameraEnabled = rotateToCameraToggle?.checked ?? false;
   gridHelper.visible = gridToggle?.checked ?? false;
 
   setPointSizeControlState(gaplessPointSizingEnabled);
