@@ -30,6 +30,7 @@ let controls = cameraSetup.controls;
 
 // Scene objects
 let sensorPoints: THREE.Points | null = null;
+let fixedSensorPoints: THREE.InstancedMesh | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
 let activeSensorData: SensorDataPoint[] = [];
@@ -37,6 +38,336 @@ let dataMin = 0;
 let dataMax = 1;
 let userMin = 0;
 let userMax = 1;
+let gaplessPointSizingEnabled = false;
+let rotatePointsToCameraEnabled = true;
+let sensorGridStep = 2;
+const sensorCloudCenter = new THREE.Vector3();
+const projectionScratchA = new THREE.Vector3();
+const projectionScratchB = new THREE.Vector3();
+const gaplessPointX = new THREE.Vector3();
+const gaplessPointY = new THREE.Vector3();
+const fixedPointDummy = new THREE.Object3D();
+const fixedPointColor = new THREE.Color();
+
+const DEFAULT_POINT_SIZE = 3;
+const GAPLESS_POINT_SIZE_FALLBACK = 12;
+const GAPLESS_POINT_SIZE_PADDING = 1.1;
+const FIXED_POINT_SIZE_BASE_RATIO = 0.5;
+const FIXED_POINT_GAPLESS_PADDING = 1.05;
+const VIEW_SETTINGS_STORAGE_KEY = 'eddy3d:view-settings:v1';
+const ALLOWED_COLORMAPS: ColormapName[] = ['turbo', 'jet', 'viridis', 'inferno', 'magma'];
+
+interface PersistedViewSettings {
+  topView: boolean;
+  autoRotate: boolean;
+  perspectiveMode: boolean;
+  grid: boolean;
+  showBuildings: boolean;
+  showEdges: boolean;
+  pointSize: number;
+  gaplessPoints: boolean;
+  rotateToCamera: boolean;
+  colormap: ColormapName;
+}
+
+function getManualPointSize(): number {
+  const pointSizeSlider = document.getElementById('point-size') as HTMLInputElement | null;
+  if (!pointSizeSlider) return DEFAULT_POINT_SIZE;
+
+  const parsedSize = parseFloat(pointSizeSlider.value);
+  if (!Number.isFinite(parsedSize) || parsedSize <= 0) {
+    return DEFAULT_POINT_SIZE;
+  }
+
+  return parsedSize;
+}
+
+function estimateAxisStep(points: SensorDataPoint[], axis: 'x' | 'y'): number {
+  const values = Array.from(new Set(points.map(point => axis === 'x' ? point.x : point.y)));
+  if (values.length < 2) return 0;
+
+  values.sort((a, b) => a - b);
+  const diffs: number[] = [];
+
+  for (let i = 1; i < values.length; i += 1) {
+    const diff = values[i] - values[i - 1];
+    if (diff > 0.0001 && Number.isFinite(diff)) {
+      diffs.push(diff);
+    }
+  }
+
+  if (diffs.length === 0) return 0;
+  diffs.sort((a, b) => a - b);
+
+  return diffs[Math.floor(diffs.length / 2)];
+}
+
+function estimatePointGridStep(points: SensorDataPoint[]): number {
+  const xStep = estimateAxisStep(points, 'x');
+  const yStep = estimateAxisStep(points, 'y');
+  const candidates = [xStep, yStep].filter(step => step > 0 && Number.isFinite(step));
+
+  if (candidates.length === 0) return 2;
+  return Math.max(...candidates);
+}
+
+function getProjectedPixelDistance(from: THREE.Vector3, to: THREE.Vector3): number {
+  projectionScratchA.copy(from).project(activeCamera);
+  projectionScratchB.copy(to).project(activeCamera);
+
+  const width = renderer.domElement.clientWidth || 1;
+  const height = renderer.domElement.clientHeight || 1;
+
+  const dx = (projectionScratchB.x - projectionScratchA.x) * width * 0.5;
+  const dy = (projectionScratchB.y - projectionScratchA.y) * height * 0.5;
+
+  return Math.hypot(dx, dy);
+}
+
+function getGaplessPointSize(): number {
+  const manualSize = getManualPointSize();
+  if (!sensorPoints || sensorGridStep <= 0) {
+    return Math.max(manualSize, GAPLESS_POINT_SIZE_FALLBACK);
+  }
+
+  gaplessPointX.set(sensorCloudCenter.x + sensorGridStep, sensorCloudCenter.y, sensorCloudCenter.z);
+  gaplessPointY.set(sensorCloudCenter.x, sensorCloudCenter.y + sensorGridStep, sensorCloudCenter.z);
+
+  const spacingX = getProjectedPixelDistance(sensorCloudCenter, gaplessPointX);
+  const spacingY = getProjectedPixelDistance(sensorCloudCenter, gaplessPointY);
+  const projectedSpacing = Math.max(spacingX, spacingY);
+
+  if (!Number.isFinite(projectedSpacing) || projectedSpacing <= 0) {
+    return Math.max(manualSize, GAPLESS_POINT_SIZE_FALLBACK);
+  }
+
+  return Math.max(manualSize, projectedSpacing * GAPLESS_POINT_SIZE_PADDING);
+}
+
+function resolvePointSize(): number {
+  if (!gaplessPointSizingEnabled) {
+    return getManualPointSize();
+  }
+  return getGaplessPointSize();
+}
+
+function getFixedPointWorldSize(): number {
+  const baseStep = sensorGridStep > 0 ? sensorGridStep : 2;
+  if (gaplessPointSizingEnabled) {
+    return baseStep * FIXED_POINT_GAPLESS_PADDING;
+  }
+
+  const manualScale = getManualPointSize() / DEFAULT_POINT_SIZE;
+  return baseStep * FIXED_POINT_SIZE_BASE_RATIO * manualScale;
+}
+
+function updateFixedPointMatrices() {
+  if (!fixedSensorPoints || activeSensorData.length === 0) return;
+
+  const worldSize = getFixedPointWorldSize();
+  fixedPointDummy.quaternion.identity();
+  fixedPointDummy.scale.set(worldSize, worldSize, 1);
+
+  for (let i = 0; i < activeSensorData.length; i += 1) {
+    const point = activeSensorData[i];
+    fixedPointDummy.position.set(point.x, point.y, point.z);
+    fixedPointDummy.updateMatrix();
+    fixedSensorPoints.setMatrixAt(i, fixedPointDummy.matrix);
+  }
+
+  fixedSensorPoints.instanceMatrix.needsUpdate = true;
+}
+
+function updatePointModeVisibility() {
+  if (sensorPoints) {
+    (sensorPoints.material as THREE.PointsMaterial).visible = rotatePointsToCameraEnabled;
+  }
+  if (fixedSensorPoints) {
+    fixedSensorPoints.visible = !rotatePointsToCameraEnabled;
+  }
+}
+
+function applyPointSize() {
+  if (sensorPoints) {
+    (sensorPoints.material as THREE.PointsMaterial).size = resolvePointSize();
+  }
+
+  if (fixedSensorPoints && !rotatePointsToCameraEnabled) {
+    updateFixedPointMatrices();
+  }
+}
+
+function setPointSizeControlState(disabled: boolean) {
+  const pointSizeSlider = document.getElementById('point-size') as HTMLInputElement | null;
+  if (pointSizeSlider) {
+    pointSizeSlider.disabled = disabled;
+  }
+
+  const pointSizeControl = document.getElementById('point-size-control');
+  pointSizeControl?.classList.toggle('disabled', disabled);
+}
+
+function readPersistedViewSettings(): Partial<PersistedViewSettings> {
+  try {
+    const raw = localStorage.getItem(VIEW_SETTINGS_STORAGE_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+
+    return parsed as Partial<PersistedViewSettings>;
+  } catch {
+    return {};
+  }
+}
+
+function persistViewSettings() {
+  const topViewToggle = document.getElementById('top-view') as HTMLInputElement | null;
+  const autoRotateToggle = document.getElementById('auto-rotate') as HTMLInputElement | null;
+  const perspectiveToggle = document.getElementById('perspective-mode') as HTMLInputElement | null;
+  const gridToggle = document.getElementById('grid') as HTMLInputElement | null;
+  const showBuildingsToggle = document.getElementById('show-buildings') as HTMLInputElement | null;
+  const showEdgesToggle = document.getElementById('show-edges') as HTMLInputElement | null;
+  const pointSizeSlider = document.getElementById('point-size') as HTMLInputElement | null;
+  const gaplessToggle = document.getElementById('gapless-points') as HTMLInputElement | null;
+  const rotateToCameraToggle = document.getElementById('rotate-to-camera') as HTMLInputElement | null;
+  const colormapSelect = document.getElementById('colormap-select') as HTMLSelectElement | null;
+
+  const pointSizeValue = pointSizeSlider ? parseFloat(pointSizeSlider.value) : DEFAULT_POINT_SIZE;
+  const colormapValue = colormapSelect?.value as ColormapName | undefined;
+  const savedColormap = colormapValue && ALLOWED_COLORMAPS.includes(colormapValue) ? colormapValue : 'jet';
+
+  const settings: PersistedViewSettings = {
+    topView: topViewToggle?.checked ?? false,
+    autoRotate: autoRotateToggle?.checked ?? false,
+    perspectiveMode: perspectiveToggle?.checked ?? false,
+    grid: gridToggle?.checked ?? false,
+    showBuildings: showBuildingsToggle?.checked ?? true,
+    showEdges: showEdgesToggle?.checked ?? true,
+    pointSize: Number.isFinite(pointSizeValue) ? pointSizeValue : DEFAULT_POINT_SIZE,
+    gaplessPoints: gaplessToggle?.checked ?? false,
+    rotateToCamera: rotateToCameraToggle?.checked ?? true,
+    colormap: savedColormap
+  };
+
+  try {
+    localStorage.setItem(VIEW_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    console.warn('Could not persist UI settings.');
+  }
+}
+
+function applyPerspectiveMode(isPerspective: boolean) {
+  const isAlreadyPerspective = activeCamera === perspectiveCamera;
+  if (isPerspective !== isAlreadyPerspective) {
+    controls = switchCamera(isPerspective, {
+      perspectiveCamera,
+      orthographicCamera,
+      activeCamera,
+      controls
+    }, renderer);
+    activeCamera = isPerspective ? perspectiveCamera : orthographicCamera;
+  }
+
+  const autoRotateToggle = document.getElementById('auto-rotate') as HTMLInputElement | null;
+  controls.autoRotate = autoRotateToggle?.checked ?? false;
+  applyPointSize();
+
+  const topViewToggle = document.getElementById('top-view') as HTMLInputElement | null;
+  if (topViewToggle?.checked) {
+    applyTopViewMode(true);
+  }
+}
+
+function applyTopViewMode(isTop: boolean) {
+  const box = new THREE.Box3();
+  if (sensorPoints) box.expandByObject(sensorPoints);
+  if (buildingVoxels) box.expandByObject(buildingVoxels);
+
+  if (!box.isEmpty()) {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    if (isTop) {
+      activeCamera.position.set(center.x, center.y - 0.001, center.z + maxDim * 2);
+      activeCamera.lookAt(center);
+      activeCamera.up.set(0, 0, 1);
+      controls.target.copy(center);
+    } else {
+      const dist = maxDim * 1.5;
+      activeCamera.position.set(center.x - dist, center.y - dist, center.z + dist);
+      activeCamera.lookAt(center);
+      activeCamera.up.set(0, 0, 1);
+      controls.target.copy(center);
+    }
+  }
+
+  controls.enableRotate = !isTop;
+  controls.update();
+  applyPointSize();
+}
+
+function applyPersistedViewSettings() {
+  const saved = readPersistedViewSettings();
+
+  const topViewToggle = document.getElementById('top-view') as HTMLInputElement | null;
+  const autoRotateToggle = document.getElementById('auto-rotate') as HTMLInputElement | null;
+  const perspectiveToggle = document.getElementById('perspective-mode') as HTMLInputElement | null;
+  const gridToggle = document.getElementById('grid') as HTMLInputElement | null;
+  const showBuildingsToggle = document.getElementById('show-buildings') as HTMLInputElement | null;
+  const showEdgesToggle = document.getElementById('show-edges') as HTMLInputElement | null;
+  const pointSizeSlider = document.getElementById('point-size') as HTMLInputElement | null;
+  const gaplessToggle = document.getElementById('gapless-points') as HTMLInputElement | null;
+  const rotateToCameraToggle = document.getElementById('rotate-to-camera') as HTMLInputElement | null;
+  const colormapSelect = document.getElementById('colormap-select') as HTMLSelectElement | null;
+
+  if (topViewToggle && typeof saved.topView === 'boolean') {
+    topViewToggle.checked = saved.topView;
+  }
+  if (autoRotateToggle && typeof saved.autoRotate === 'boolean') {
+    autoRotateToggle.checked = saved.autoRotate;
+  }
+  if (perspectiveToggle && typeof saved.perspectiveMode === 'boolean') {
+    perspectiveToggle.checked = saved.perspectiveMode;
+  }
+  if (gridToggle && typeof saved.grid === 'boolean') {
+    gridToggle.checked = saved.grid;
+  }
+  if (showBuildingsToggle && typeof saved.showBuildings === 'boolean') {
+    showBuildingsToggle.checked = saved.showBuildings;
+  }
+  if (showEdgesToggle && typeof saved.showEdges === 'boolean') {
+    showEdgesToggle.checked = saved.showEdges;
+  }
+  if (gaplessToggle && typeof saved.gaplessPoints === 'boolean') {
+    gaplessToggle.checked = saved.gaplessPoints;
+  }
+  if (rotateToCameraToggle && typeof saved.rotateToCamera === 'boolean') {
+    rotateToCameraToggle.checked = saved.rotateToCamera;
+  }
+  if (colormapSelect && typeof saved.colormap === 'string') {
+    const mapName = saved.colormap as ColormapName;
+    if (ALLOWED_COLORMAPS.includes(mapName)) {
+      colormapSelect.value = mapName;
+    }
+  }
+  if (pointSizeSlider && typeof saved.pointSize === 'number' && Number.isFinite(saved.pointSize)) {
+    const sliderMin = parseFloat(pointSizeSlider.min);
+    const sliderMax = parseFloat(pointSizeSlider.max);
+    const clampedPointSize = Math.min(sliderMax, Math.max(sliderMin, saved.pointSize));
+    pointSizeSlider.value = clampedPointSize.toString();
+  }
+
+  gaplessPointSizingEnabled = gaplessToggle?.checked ?? false;
+  rotatePointsToCameraEnabled = rotateToCameraToggle?.checked ?? true;
+  gridHelper.visible = gridToggle?.checked ?? false;
+
+  setPointSizeControlState(gaplessPointSizingEnabled);
+  updatePointModeVisibility();
+  applyPerspectiveMode(perspectiveToggle?.checked ?? false);
+  applyTopViewMode(topViewToggle?.checked ?? false);
+}
 
 // Lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 1);
@@ -155,6 +486,9 @@ function renderDataset(name: string) {
   if (sensorPoints) {
     scene.remove(sensorPoints);
   }
+  if (fixedSensorPoints) {
+    scene.remove(fixedSensorPoints);
+  }
 
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(activeSensorData.length * 3);
@@ -177,15 +511,49 @@ function renderDataset(name: string) {
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.computeBoundingBox();
+  if (geometry.boundingBox) {
+    geometry.boundingBox.getCenter(sensorCloudCenter);
+  }
+  sensorGridStep = estimatePointGridStep(activeSensorData);
 
   const material = new THREE.PointsMaterial({
-    size: (document.getElementById('point-size') as HTMLInputElement)?.value ? parseFloat((document.getElementById('point-size') as HTMLInputElement).value) : 10,
+    size: getManualPointSize(),
     vertexColors: true,
     sizeAttenuation: true
   });
 
   sensorPoints = new THREE.Points(geometry, material);
   scene.add(sensorPoints);
+
+  const fixedPointGeometry = new THREE.PlaneGeometry(1, 1);
+  const fixedPointMaterial = new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide
+  });
+  const fixedMesh = new THREE.InstancedMesh(fixedPointGeometry, fixedPointMaterial, activeSensorData.length);
+
+  for (let i = 0; i < activeSensorData.length; i += 1) {
+    const point = activeSensorData[i];
+    fixedPointDummy.position.set(point.x, point.y, point.z);
+    fixedPointDummy.quaternion.identity();
+    fixedPointDummy.scale.set(1, 1, 1);
+    fixedPointDummy.updateMatrix();
+    fixedMesh.setMatrixAt(i, fixedPointDummy.matrix);
+
+    fixedPointColor.setRGB(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]);
+    fixedMesh.setColorAt(i, fixedPointColor);
+  }
+
+  fixedMesh.instanceMatrix.needsUpdate = true;
+  if (fixedMesh.instanceColor) {
+    fixedMesh.instanceColor.needsUpdate = true;
+  }
+
+  fixedSensorPoints = fixedMesh;
+  scene.add(fixedSensorPoints);
+
+  applyPointSize();
+  updatePointModeVisibility();
   console.log(`Rendered: ${name}. Points: ${activeSensorData.length}`);
 
   // Create Voxel City (Instanced Mesh)
@@ -228,6 +596,11 @@ function renderDataset(name: string) {
     activeCamera,
     controls
   }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
+
+  const topViewToggle = document.getElementById('top-view') as HTMLInputElement | null;
+  if (topViewToggle?.checked) {
+    applyTopViewMode(true);
+  }
 }
 
 function createBuildingEdges(validBuildings: SensorDataPoint[]) {
@@ -289,46 +662,68 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
 }
 
 function updateSensorColors(mapName: ColormapName) {
-  if (!sensorPoints || activeSensorData.length === 0) return;
-
-  const colors = sensorPoints.geometry.attributes.color.array as Float32Array;
+  if (activeSensorData.length === 0) return;
+  const pointColors = sensorPoints ? sensorPoints.geometry.attributes.color.array as Float32Array : null;
 
   activeSensorData.forEach((d, i) => {
     const normalized = (d.val - userMin) / (userMax - userMin || 1);
     const c = getColormapColor(normalized, mapName);
 
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
+    if (pointColors) {
+      pointColors[i * 3] = c.r;
+      pointColors[i * 3 + 1] = c.g;
+      pointColors[i * 3 + 2] = c.b;
+    }
+
+    if (fixedSensorPoints) {
+      fixedPointColor.setRGB(c.r, c.g, c.b);
+      fixedSensorPoints.setColorAt(i, fixedPointColor);
+    }
   });
 
-  sensorPoints.geometry.attributes.color.needsUpdate = true;
+  if (sensorPoints) {
+    sensorPoints.geometry.attributes.color.needsUpdate = true;
+  }
+  if (fixedSensorPoints?.instanceColor) {
+    fixedSensorPoints.instanceColor.needsUpdate = true;
+  }
 }
 
 // UI Event Listeners
 document.getElementById('auto-rotate')?.addEventListener('change', (e) => {
   controls.autoRotate = (e.target as HTMLInputElement).checked;
+  persistViewSettings();
 });
 
 document.getElementById('perspective-mode')?.addEventListener('change', (e) => {
-  const isPerspective = (e.target as HTMLInputElement).checked;
-  controls = switchCamera(isPerspective, {
-    perspectiveCamera,
-    orthographicCamera,
-    activeCamera,
-    controls
-  }, renderer);
-  activeCamera = isPerspective ? perspectiveCamera : orthographicCamera;
+  applyPerspectiveMode((e.target as HTMLInputElement).checked);
+  persistViewSettings();
 });
 
 document.getElementById('grid')?.addEventListener('change', (e) => {
   gridHelper.visible = (e.target as HTMLInputElement).checked;
+  persistViewSettings();
 });
 
-document.getElementById('point-size')?.addEventListener('input', (e) => {
-  if (sensorPoints) {
-    (sensorPoints.material as THREE.PointsMaterial).size = parseFloat((e.target as HTMLInputElement).value);
+document.getElementById('point-size')?.addEventListener('input', () => {
+  if (!gaplessPointSizingEnabled) {
+    applyPointSize();
   }
+  persistViewSettings();
+});
+
+document.getElementById('gapless-points')?.addEventListener('change', (e) => {
+  gaplessPointSizingEnabled = (e.target as HTMLInputElement).checked;
+  setPointSizeControlState(gaplessPointSizingEnabled);
+  applyPointSize();
+  persistViewSettings();
+});
+
+document.getElementById('rotate-to-camera')?.addEventListener('change', (e) => {
+  rotatePointsToCameraEnabled = (e.target as HTMLInputElement).checked;
+  updatePointModeVisibility();
+  applyPointSize();
+  persistViewSettings();
 });
 
 document.getElementById('results-select')?.addEventListener('change', (e) => {
@@ -340,42 +735,19 @@ document.getElementById('show-buildings')?.addEventListener('change', (e) => {
   if (buildingVoxels) {
     buildingVoxels.visible = (e.target as HTMLInputElement).checked;
   }
+  persistViewSettings();
 });
 
 document.getElementById('show-edges')?.addEventListener('change', (e) => {
   if (edgesVoxels) {
     edgesVoxels.visible = (e.target as HTMLInputElement).checked;
   }
+  persistViewSettings();
 });
 
 document.getElementById('top-view')?.addEventListener('change', (e) => {
-  const isTop = (e.target as HTMLInputElement).checked;
-  const box = new THREE.Box3();
-  if (sensorPoints) box.expandByObject(sensorPoints);
-  if (buildingVoxels) box.expandByObject(buildingVoxels);
-
-  if (!box.isEmpty()) {
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    if (isTop) {
-      activeCamera.position.set(center.x, center.y - 0.001, center.z + maxDim * 2);
-      activeCamera.lookAt(center);
-      activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-    } else {
-      // Isometric View
-      const dist = maxDim * 1.5;
-      activeCamera.position.set(center.x - dist, center.y - dist, center.z + dist);
-      activeCamera.lookAt(center);
-      activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-    }
-  }
-
-  controls.enableRotate = !isTop;
-  controls.update();
+  applyTopViewMode((e.target as HTMLInputElement).checked);
+  persistViewSettings();
 });
 
 // CSV Upload Listener
@@ -413,6 +785,9 @@ window.addEventListener('resize', () => {
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
+  if (gaplessPointSizingEnabled && rotatePointsToCameraEnabled && sensorPoints) {
+    applyPointSize();
+  }
   controls.update();
   renderer.render(scene, activeCamera);
 }
@@ -441,6 +816,7 @@ function loadPlaceholder() {
 document.getElementById('colormap-select')?.addEventListener('change', (e) => {
   const mapName = (e.target as HTMLSelectElement).value;
   updateSensorColors(mapName as ColormapName);
+  persistViewSettings();
 });
 
 // Advanced Tab Colormap Slider Logic
@@ -494,6 +870,8 @@ menuToggle?.addEventListener('click', () => {
   menuToggle.classList.toggle('open');
   uiContainer?.classList.toggle('sidebar-open');
 });
+
+applyPersistedViewSettings();
 
 // Close sidebar when clicking outside
 canvasContainer.addEventListener('click', () => {

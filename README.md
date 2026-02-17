@@ -19,7 +19,7 @@ A web-based visualization tool for Eddy3D simulation results. This application a
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16 or higher recommended)
+- [Node.js](https://nodejs.org/) (`>=20.19.0` or `>=22.12.0`; Node 22 LTS recommended)
 
 ### Local Development
 

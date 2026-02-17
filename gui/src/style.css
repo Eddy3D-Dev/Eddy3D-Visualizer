@@ -200,6 +200,16 @@ input[type="file"] {
   font-size: 0.9rem;
 }
 
+#point-size-control.disabled {
+  color: var(--text-secondary);
+}
+
+#point-size-control input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: saturate(0);
+}
+
 /* Switch Styles */
 .switch {
   position: relative;
