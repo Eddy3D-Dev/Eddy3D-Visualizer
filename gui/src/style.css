@@ -200,6 +200,11 @@ input[type="file"] {
   font-size: 0.9rem;
 }
 
+#point-size-control {
+  margin-left: 16px;
+  width: calc(100% - 16px);
+}
+
 #point-size-control.disabled {
   color: var(--text-secondary);
 }

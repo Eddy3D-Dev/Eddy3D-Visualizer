@@ -38,7 +38,7 @@ let dataMin = 0;
 let dataMax = 1;
 let userMin = 0;
 let userMax = 1;
-let gaplessPointSizingEnabled = false;
+let gaplessPointSizingEnabled = true;
 let rotatePointsToCameraEnabled = true;
 let sensorGridStep = 2;
 const sensorCloudCenter = new THREE.Vector3();
@@ -245,7 +245,7 @@ function persistViewSettings() {
     showBuildings: showBuildingsToggle?.checked ?? true,
     showEdges: showEdgesToggle?.checked ?? true,
     pointSize: Number.isFinite(pointSizeValue) ? pointSizeValue : DEFAULT_POINT_SIZE,
-    gaplessPoints: gaplessToggle?.checked ?? false,
+    gaplessPoints: gaplessToggle?.checked ?? true,
     rotateToCamera: rotateToCameraToggle?.checked ?? true,
     colormap: savedColormap
   };
@@ -359,7 +359,7 @@ function applyPersistedViewSettings() {
     pointSizeSlider.value = clampedPointSize.toString();
   }
 
-  gaplessPointSizingEnabled = gaplessToggle?.checked ?? false;
+  gaplessPointSizingEnabled = gaplessToggle?.checked ?? true;
   rotatePointsToCameraEnabled = rotateToCameraToggle?.checked ?? true;
   gridHelper.visible = gridToggle?.checked ?? false;
 
