@@ -8,10 +8,20 @@ import {
   updateDownloadButton,
   type ScreenshotConfig 
 } from './screenshot';
+import {
+  PLACEHOLDER_FILENAME,
+  SCENE_BACKGROUND_COLOR,
+  DEFAULT_POINT_SIZE,
+  GAPLESS_POINT_SIZE_FALLBACK,
+  GAPLESS_POINT_SIZE_PADDING,
+  FIXED_POINT_SIZE_BASE_RATIO,
+  FIXED_POINT_GAPLESS_PADDING,
+  VIEW_SETTINGS_STORAGE_KEY,
+  ALLOWED_COLORMAPS
+} from './config';
 
-const PLACEHOLDER_NAME = 'ML_Basic_Test_0_0.csv';
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf1f5f9);
+scene.background = new THREE.Color(SCENE_BACKGROUND_COLOR);
 
 const canvasContainer = document.getElementById('canvas-container') as HTMLElement;
 
@@ -48,14 +58,6 @@ const gaplessPointX = new THREE.Vector3();
 const gaplessPointY = new THREE.Vector3();
 const fixedPointDummy = new THREE.Object3D();
 const fixedPointColor = new THREE.Color();
-
-const DEFAULT_POINT_SIZE = 3;
-const GAPLESS_POINT_SIZE_FALLBACK = 12;
-const GAPLESS_POINT_SIZE_PADDING = 1.1;
-const FIXED_POINT_SIZE_BASE_RATIO = 0.5;
-const FIXED_POINT_GAPLESS_PADDING = 1.05;
-const VIEW_SETTINGS_STORAGE_KEY = 'eddy3d:view-settings:v1';
-const ALLOWED_COLORMAPS: ColormapName[] = ['turbo', 'jet', 'viridis', 'inferno', 'magma'];
 
 interface PersistedViewSettings {
   topView: boolean;
@@ -754,8 +756,8 @@ document.getElementById('top-view')?.addEventListener('change', (e) => {
 document.getElementById('csv-upload')?.addEventListener('change', (e) => {
   handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
     // Remove placeholder if exists
-    if (csvLoader.hasDataset(PLACEHOLDER_NAME)) {
-      csvLoader.deleteDataset(PLACEHOLDER_NAME);
+    if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
+      csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
   });
@@ -763,8 +765,8 @@ document.getElementById('csv-upload')?.addEventListener('change', (e) => {
 
 document.getElementById('folder-upload')?.addEventListener('change', (e) => {
   handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
-    if (csvLoader.hasDataset(PLACEHOLDER_NAME)) {
-      csvLoader.deleteDataset(PLACEHOLDER_NAME);
+    if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
+      csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
   });
@@ -795,16 +797,16 @@ function animate() {
 // Load placeholder
 csvLoader.processCSVData
 function loadPlaceholder() {
-  fetch(PLACEHOLDER_NAME)
+  fetch(PLACEHOLDER_FILENAME)
     .then(response => {
       if (!response.ok) throw new Error("Placeholder not found");
       return response.text();
     })
     .then(text => {
-      csvLoader.processCSVData(text, PLACEHOLDER_NAME);
+      csvLoader.processCSVData(text, PLACEHOLDER_FILENAME);
       const select = document.getElementById('results-select') as HTMLSelectElement;
-      if (select) select.value = PLACEHOLDER_NAME;
-      renderDataset(PLACEHOLDER_NAME);
+      if (select) select.value = PLACEHOLDER_FILENAME;
+      renderDataset(PLACEHOLDER_FILENAME);
     })
     .catch(err => {
       console.warn("Could not load placeholder:", err);
