@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import type { CameraSetup } from './camera';
 import type { SensorDataPoint } from './csv-loader';
+import { SCENE_BACKGROUND_COLOR } from './config';
 
 export interface ScreenshotConfig {
   canvasContainer: HTMLElement;
@@ -155,7 +156,7 @@ async function mergeImagesSideBySide(leftBlob: Blob, rightBlob: Blob): Promise<B
           reject(new Error('Failed to get canvas context'));
           return;
         }
-        ctx.fillStyle = '#f1f5f9'; // Background color
+        ctx.fillStyle = '#' + SCENE_BACKGROUND_COLOR.toString(16).padStart(6, '0'); // Background color
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(leftImg, 0, 0);
         ctx.drawImage(rightImg, leftImg.width, 0);
