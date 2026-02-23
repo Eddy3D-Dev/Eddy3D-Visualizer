@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import type { CameraSetup } from './camera';
@@ -8,7 +9,7 @@ export interface ScreenshotConfig {
   canvasContainer: HTMLElement;
   renderer: THREE.WebGLRenderer;
   cameras: CameraSetup;
-  controls: any;
+  controls: OrbitControls;
   sensorPoints: THREE.Points | null;
   buildingVoxels: THREE.InstancedMesh | null;
   loadedDatasets: Map<string, SensorDataPoint[]>;
