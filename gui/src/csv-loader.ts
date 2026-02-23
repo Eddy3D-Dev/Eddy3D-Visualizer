@@ -20,13 +20,29 @@ export class CSVLoader {
 
   processCSVData(text: string, name: string) {
     try {
-      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-      if (lines.length === 0) {
+      // ⚡ Bolt Optimization: Iterate over string using indexOf instead of split('\n')
+      // This avoids creating a massive array of strings for large files, significantly reducing memory usage and GC pressure.
+
+      let lineStart = 0;
+      let lineEnd = text.indexOf('\n', lineStart);
+      if (lineEnd === -1) lineEnd = text.length;
+
+      // Extract first line (header) and handle potential empty leading lines
+      let headerLine = text.substring(lineStart, lineEnd).trim();
+
+      while (headerLine.length === 0 && lineStart < text.length) {
+          lineStart = lineEnd + 1;
+          lineEnd = text.indexOf('\n', lineStart);
+          if (lineEnd === -1) lineEnd = text.length;
+          headerLine = text.substring(lineStart, lineEnd).trim();
+      }
+
+      if (headerLine.length === 0) {
         console.error('CSV is empty');
         return;
       }
 
-      const header = lines[0].split(',').map(h => h.trim());
+      const header = headerLine.split(',').map(h => h.trim());
       const xIdx = header.findIndex(h => h.toLowerCase() === 'x');
       const yIdx = header.findIndex(h => h.toLowerCase() === 'y');
       const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
@@ -39,20 +55,42 @@ export class CSVLoader {
       }
 
       const newData: SensorDataPoint[] = [];
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx);
 
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',');
-        if (parts.length <= Math.max(xIdx, yIdx, zIdx, valIdx)) continue;
+      // Advance past the header
+      lineStart = lineEnd + 1;
 
-        const x = parseFloat(parts[xIdx]);
-        const y = parseFloat(parts[yIdx]);
-        const z = parseFloat(parts[zIdx]);
-        const val = valIdx !== -1 ? parseFloat(parts[valIdx]) : 0;
-        const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
+      while (lineStart < text.length) {
+        lineEnd = text.indexOf('\n', lineStart);
+        if (lineEnd === -1) lineEnd = text.length;
 
-        if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-          newData.push({ x, y, z, val, h });
+        // Determine content end (exclude \r if present)
+        let contentEnd = lineEnd;
+        if (contentEnd > lineStart && text[contentEnd - 1] === '\r') {
+            contentEnd--;
         }
+
+        // Only process if there is content
+        if (contentEnd > lineStart) {
+            const line = text.substring(lineStart, contentEnd);
+            // Skip whitespace-only lines
+            if (line.trim().length > 0) {
+                const parts = line.split(',');
+                if (parts.length > maxIdx) {
+                    const x = parseFloat(parts[xIdx]);
+                    const y = parseFloat(parts[yIdx]);
+                    const z = parseFloat(parts[zIdx]);
+                    const val = valIdx !== -1 ? parseFloat(parts[valIdx]) : 0;
+                    const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
+
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
+                      newData.push({ x, y, z, val, h });
+                    }
+                }
+            }
+        }
+
+        lineStart = lineEnd + 1;
       }
 
       if (newData.length > 0) {
