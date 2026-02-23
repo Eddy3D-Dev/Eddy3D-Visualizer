@@ -855,10 +855,12 @@ document.getElementById('colormap-min')?.addEventListener('input', updateRange);
 document.getElementById('colormap-max')?.addEventListener('input', updateRange);
 
 document.getElementById('advanced-toggle')?.addEventListener('click', function (this: HTMLElement) {
-  this.classList.toggle('active');
   const content = document.getElementById('advanced-content');
   if (content) {
-    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+    this.classList.toggle('active', isHidden);
+    this.setAttribute('aria-expanded', String(isHidden));
   }
 });
 

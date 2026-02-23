@@ -131,11 +131,11 @@
         </div>
 
         <div class="control-group">
-          <div class="collapsible-header" id="advanced-toggle">
+          <button class="collapsible-header" id="advanced-toggle" type="button" aria-expanded="false" aria-controls="advanced-content">
             <h3>Advanced</h3>
             <span class="icon">▼</span>
-          </div>
-          <div class="collapsible-content" id="advanced-content" style="display: none;">
+          </button>
+          <div class="collapsible-content" id="advanced-content" role="region" aria-label="Advanced Settings" style="display: none;">
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <span>Min Value</span>
