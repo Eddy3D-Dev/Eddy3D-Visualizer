@@ -55,7 +55,8 @@ export class CSVLoader {
       }
 
       const newData: SensorDataPoint[] = [];
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx);
+      // ⚡ Bolt Optimization: include hIdx in maxIdx to ensure we parse height if present
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx);
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -72,21 +73,44 @@ export class CSVLoader {
 
         // Only process if there is content
         if (contentEnd > lineStart) {
-            const line = text.substring(lineStart, contentEnd);
-            // Skip whitespace-only lines
-            if (line.trim().length > 0) {
-                const parts = line.split(',');
-                if (parts.length > maxIdx) {
-                    const x = parseFloat(parts[xIdx]);
-                    const y = parseFloat(parts[yIdx]);
-                    const z = parseFloat(parts[zIdx]);
-                    const val = valIdx !== -1 ? parseFloat(parts[valIdx]) : 0;
-                    const h = hIdx !== -1 ? parseFloat(parts[hIdx]) : 0;
+            // ⚡ Bolt Optimization: Manual column parsing
+            // Avoids line.split(',') which creates arrays and strings for every line.
+            // Instead, we scan for commas and extract only needed columns.
 
-                    if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-                      newData.push({ x, y, z, val, h });
-                    }
+            let currentPos = lineStart;
+            let colIdx = 0;
+            let x = NaN, y = NaN, z = NaN;
+            // Default val/h to 0 if column not in header, else NaN (expecting value)
+            let val = valIdx !== -1 ? NaN : 0;
+            let h = hIdx !== -1 ? NaN : 0;
+
+            while (currentPos <= contentEnd) {
+                let nextComma = text.indexOf(',', currentPos);
+                if (nextComma === -1 || nextComma > contentEnd) nextComma = contentEnd;
+
+                // Parse only relevant columns
+                if (colIdx === xIdx) {
+                    x = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === yIdx) {
+                    y = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === zIdx) {
+                    z = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === valIdx) {
+                    val = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === hIdx) {
+                    h = parseFloat(text.substring(currentPos, nextComma));
                 }
+
+                // Stop if we passed the last column we need
+                if (colIdx >= maxIdx) break;
+
+                if (nextComma >= contentEnd) break;
+                currentPos = nextComma + 1;
+                colIdx++;
+            }
+
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
+                newData.push({ x, y, z, val, h });
             }
         }
 
