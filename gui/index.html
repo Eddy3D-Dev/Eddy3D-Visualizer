@@ -39,7 +39,7 @@
               <button id="download-screenshots" class="download-btn" disabled>
                 Download Screenshots
               </button>
-              <select id="dpi-select" class="dpi-select">
+              <select id="dpi-select" class="dpi-select" aria-label="Screenshot DPI">
                 <option value="100">100px</option>
                 <option value="150" selected>150px</option>
                 <option value="300">300px</option>
@@ -60,66 +60,66 @@
           <div class="toggle-item">
             <span>Top View</span>
             <label class="switch">
-              <input type="checkbox" id="top-view">
+              <input type="checkbox" id="top-view" aria-label="Top View">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Auto-rotate</span>
             <label class="switch">
-              <input type="checkbox" id="auto-rotate">
+              <input type="checkbox" id="auto-rotate" aria-label="Auto-rotate">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Perspective Mode</span>
             <label class="switch">
-              <input type="checkbox" id="perspective-mode">
+              <input type="checkbox" id="perspective-mode" aria-label="Perspective Mode">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Grid</span>
             <label class="switch">
-              <input type="checkbox" id="grid">
+              <input type="checkbox" id="grid" aria-label="Grid">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Show Buildings</span>
             <label class="switch">
-              <input type="checkbox" id="show-buildings" checked>
+              <input type="checkbox" id="show-buildings" checked aria-label="Show Buildings">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Show Edges</span>
             <label class="switch">
-              <input type="checkbox" id="show-edges" checked>
+              <input type="checkbox" id="show-edges" checked aria-label="Show Edges">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Gapless Points</span>
             <label class="switch">
-              <input type="checkbox" id="gapless-points" checked>
+              <input type="checkbox" id="gapless-points" checked aria-label="Gapless Points">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" id="point-size-control">
             <span>Point Size</span>
-            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" style="width: 100px;">
+            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" style="width: 100px;" aria-label="Point Size">
           </div>
           <div class="toggle-item">
             <span>Rotate To Camera</span>
             <label class="switch">
-              <input type="checkbox" id="rotate-to-camera">
+              <input type="checkbox" id="rotate-to-camera" aria-label="Rotate To Camera">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
             <span>Colormap</span>
-            <select id="colormap-select"
+            <select id="colormap-select" aria-label="Colormap Selection"
               style="width: 100px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0;">
               <option value="turbo">Turbo</option>
               <option value="jet" selected>Jet</option>
@@ -141,14 +141,14 @@
                 <span>Min Value</span>
                 <span id="min-val-display" style="font-size: 0.8em; color: var(--text-secondary);">0</span>
               </div>
-              <input type="range" id="colormap-min" style="width: 100%;">
+              <input type="range" id="colormap-min" style="width: 100%;" aria-label="Colormap Minimum Value">
             </div>
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <span>Max Value</span>
                 <span id="max-val-display" style="font-size: 0.8em; color: var(--text-secondary);">1</span>
               </div>
-              <input type="range" id="colormap-max" style="width: 100%;">
+              <input type="range" id="colormap-max" style="width: 100%;" aria-label="Colormap Maximum Value">
             </div>
           </div>
         </div>
