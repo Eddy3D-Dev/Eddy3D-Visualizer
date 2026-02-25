@@ -90,11 +90,20 @@ h1 {
 }
 
 
-/* Custom Upload Button */
-input[type="file"] {
-  display: none;
+/* Accessibility Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
+/* Custom Upload Button */
 .custom-file-upload {
   display: inline-block;
   background-color: #000000;
@@ -113,6 +122,11 @@ input[type="file"] {
 
 .custom-file-upload:hover {
   background-color: #333333;
+}
+
+.custom-file-upload:focus-within {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
 }
 
 /* Download Button */
