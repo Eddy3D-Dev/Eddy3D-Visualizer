@@ -609,13 +609,19 @@ function renderDataset(name: string) {
 function createBuildingEdges(validBuildings: SensorDataPoint[]) {
   const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
   const edgePositions: number[] = [];
-  const hMap = new Map<string, number>();
+  // ⚡ Bolt Optimization: Use nested Map<number, Map<number, number>> to avoid string allocation
+  const hMap = new Map<number, Map<number, number>>();
 
   validBuildings.forEach(d => {
-    hMap.set(`${d.x},${d.y}`, d.h);
+    let xMap = hMap.get(d.x);
+    if (!xMap) {
+      xMap = new Map<number, number>();
+      hMap.set(d.x, xMap);
+    }
+    xMap.set(d.y, d.h);
   });
 
-  const getH = (x: number, y: number) => hMap.get(`${x},${y}`) || 0;
+  const getH = (x: number, y: number) => hMap.get(x)?.get(y) || 0;
 
   validBuildings.forEach(d => {
     const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
