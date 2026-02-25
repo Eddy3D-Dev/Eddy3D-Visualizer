@@ -497,6 +497,7 @@ function renderDataset(name: string) {
   const colors = new Float32Array(activeSensorData.length * 3);
 
   const mapName = (document.getElementById('colormap-select') as HTMLSelectElement)?.value || 'jet';
+  const colorScratch = new THREE.Color();
 
   activeSensorData.forEach((d, i) => {
     positions[i * 3] = d.x;
@@ -504,11 +505,11 @@ function renderDataset(name: string) {
     positions[i * 3 + 2] = d.z;
 
     const normalized = (d.val - userMin) / (userMax - userMin || 1);
-    const c = getColormapColor(normalized, mapName as ColormapName);
+    getColormapColor(normalized, mapName as ColormapName, colorScratch);
 
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
+    colors[i * 3] = colorScratch.r;
+    colors[i * 3 + 1] = colorScratch.g;
+    colors[i * 3 + 2] = colorScratch.b;
   });
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -666,19 +667,20 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
 function updateSensorColors(mapName: ColormapName) {
   if (activeSensorData.length === 0) return;
   const pointColors = sensorPoints ? sensorPoints.geometry.attributes.color.array as Float32Array : null;
+  const colorScratch = new THREE.Color();
 
   activeSensorData.forEach((d, i) => {
     const normalized = (d.val - userMin) / (userMax - userMin || 1);
-    const c = getColormapColor(normalized, mapName);
+    getColormapColor(normalized, mapName, colorScratch);
 
     if (pointColors) {
-      pointColors[i * 3] = c.r;
-      pointColors[i * 3 + 1] = c.g;
-      pointColors[i * 3 + 2] = c.b;
+      pointColors[i * 3] = colorScratch.r;
+      pointColors[i * 3 + 1] = colorScratch.g;
+      pointColors[i * 3 + 2] = colorScratch.b;
     }
 
     if (fixedSensorPoints) {
-      fixedPointColor.setRGB(c.r, c.g, c.b);
+      fixedPointColor.setRGB(colorScratch.r, colorScratch.g, colorScratch.b);
       fixedSensorPoints.setColorAt(i, fixedPointColor);
     }
   });
