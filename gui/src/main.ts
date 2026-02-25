@@ -359,6 +359,9 @@ function applyPersistedViewSettings() {
     const sliderMax = parseFloat(pointSizeSlider.max);
     const clampedPointSize = Math.min(sliderMax, Math.max(sliderMin, saved.pointSize));
     pointSizeSlider.value = clampedPointSize.toString();
+    updatePointSizeDisplay(clampedPointSize);
+  } else {
+    updatePointSizeDisplay(DEFAULT_POINT_SIZE);
   }
 
   gaplessPointSizingEnabled = gaplessToggle?.checked ?? true;
@@ -709,7 +712,17 @@ document.getElementById('grid')?.addEventListener('change', (e) => {
   persistViewSettings();
 });
 
-document.getElementById('point-size')?.addEventListener('input', () => {
+function updatePointSizeDisplay(value: number) {
+  const display = document.getElementById('point-size-display');
+  if (display) {
+    display.textContent = value.toFixed(1);
+  }
+}
+
+document.getElementById('point-size')?.addEventListener('input', (e) => {
+  const val = parseFloat((e.target as HTMLInputElement).value);
+  updatePointSizeDisplay(val);
+
   if (!gaplessPointSizingEnabled) {
     applyPointSize();
   }
