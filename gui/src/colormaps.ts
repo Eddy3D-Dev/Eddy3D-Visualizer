@@ -88,12 +88,53 @@ const infernoStops: ColorStop[] = [
 ];
 export function getInfernoColor(t: number, target?: THREE.Color) { return lerpColor(t, infernoStops, target); }
 
-export function getColormapColor(t: number, mapName: ColormapName, target?: THREE.Color): THREE.Color {
-  switch (mapName) {
-    case 'jet': return getJetColor(t, target);
-    case 'viridis': return getViridisColor(t, target);
-    case 'magma': return getMagmaColor(t, target);
-    case 'inferno': return getInfernoColor(t, target);
-    case 'turbo': default: return getTurboColor(t, target);
+// ⚡ Bolt Optimization: Cache colormaps in a Look-Up Table (LUT)
+// This avoids expensive polynomial evaluations and linear interpolation on every pixel/point.
+const LUT_SIZE = 1024;
+const colormapCache = new Map<ColormapName, Float32Array>();
+let lastMapName: ColormapName | null = null;
+let lastLut: Float32Array | null = null;
+
+function generateLUT(mapName: ColormapName): Float32Array {
+  const lut = new Float32Array(LUT_SIZE * 3);
+  const color = new THREE.Color();
+  for (let i = 0; i < LUT_SIZE; i++) {
+    const t = i / (LUT_SIZE - 1);
+    let c: THREE.Color;
+    switch (mapName) {
+      case 'jet': c = getJetColor(t, color); break;
+      case 'viridis': c = getViridisColor(t, color); break;
+      case 'magma': c = getMagmaColor(t, color); break;
+      case 'inferno': c = getInfernoColor(t, color); break;
+      case 'turbo': default: c = getTurboColor(t, color); break;
+    }
+    lut[i * 3] = c.r;
+    lut[i * 3 + 1] = c.g;
+    lut[i * 3 + 2] = c.b;
   }
+  return lut;
+}
+
+export function getColormapColor(t: number, mapName: ColormapName, target?: THREE.Color): THREE.Color {
+  let lut: Float32Array;
+
+  // Fast path: avoid Map lookup if using same colormap as last call
+  if (mapName === lastMapName && lastLut) {
+    lut = lastLut;
+  } else {
+    lut = colormapCache.get(mapName)!;
+    if (!lut) {
+      lut = generateLUT(mapName);
+      colormapCache.set(mapName, lut);
+    }
+    lastMapName = mapName;
+    lastLut = lut;
+  }
+
+  const color = target || new THREE.Color();
+  const index = Math.floor(Math.max(0, Math.min(1, t)) * (LUT_SIZE - 1));
+  const i3 = index * 3;
+
+  color.setRGB(lut[i3], lut[i3 + 1], lut[i3 + 2]);
+  return color;
 }
