@@ -85,7 +85,14 @@ function getManualPointSize(): number {
 }
 
 function estimateAxisStep(points: SensorDataPoint[], axis: 'x' | 'y'): number {
-  const values = Array.from(new Set(points.map(point => axis === 'x' ? point.x : point.y)));
+  // ⚡ Bolt Optimization: Use explicit loop instead of map/filter to reduce GC pressure
+  const uniqueValues = new Set<number>();
+  const len = points.length;
+  for (let i = 0; i < len; i++) {
+    uniqueValues.add(axis === 'x' ? points[i].x : points[i].y);
+  }
+
+  const values = Array.from(uniqueValues);
   if (values.length < 2) return 0;
 
   values.sort((a, b) => a - b);
