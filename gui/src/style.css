@@ -229,6 +229,39 @@ h1 {
   filter: saturate(0);
 }
 
+/* Select Container */
+.select-container {
+  margin-top: 10px;
+}
+
+/* Results Dropdown */
+.results-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  margin-top: 5px;
+}
+
+/* Colormap Dropdown */
+.colormap-select {
+  width: 100px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Toggle Label */
+.toggle-label {
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+/* Range Input */
+.range-input {
+  width: 100%;
+}
+
 /* Switch Styles */
 .switch {
   position: relative;
@@ -274,6 +307,12 @@ input:checked+.slider {
 
 input:checked+.slider:before {
   transform: translateX(20px);
+}
+
+/* Keyboard Focus for Hidden Checkbox */
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
 }
 
 #canvas-container {
