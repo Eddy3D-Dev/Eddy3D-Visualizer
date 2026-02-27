@@ -34,7 +34,7 @@
               <input type="file" id="folder-upload" webkitdirectory directory multiple class="sr-only">
             </label>
           </div>
-          <div class="select-container" style="margin-top: 10px;">
+          <div class="select-container">
             <div class="download-row">
               <button id="download-screenshots" class="download-btn" disabled>
                 Download Screenshots
@@ -46,10 +46,9 @@
               </select>
             </div>
           </div>
-          <div class="select-container" style="margin-top: 10px;">
+          <div class="select-container">
             <label for="results-select">Results:</label>
-            <select id="results-select"
-              style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0; margin-top: 5px;">
+            <select id="results-select" class="results-select">
               <option value="" disabled selected>Select a result set...</option>
             </select>
           </div>
@@ -58,49 +57,49 @@
         <div class="control-group">
           <h3>View Settings</h3>
           <div class="toggle-item">
-            <label for="top-view" style="cursor: pointer; flex-grow: 1;">Top View</label>
+            <label for="top-view" class="toggle-label">Top View</label>
             <label class="switch">
               <input type="checkbox" id="top-view" aria-label="Top View">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="auto-rotate" style="cursor: pointer; flex-grow: 1;">Auto-rotate</label>
+            <label for="auto-rotate" class="toggle-label">Auto-rotate</label>
             <label class="switch">
               <input type="checkbox" id="auto-rotate" aria-label="Auto-rotate">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="perspective-mode" style="cursor: pointer; flex-grow: 1;">Perspective Mode</label>
+            <label for="perspective-mode" class="toggle-label">Perspective Mode</label>
             <label class="switch">
               <input type="checkbox" id="perspective-mode" aria-label="Perspective Mode">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="grid" style="cursor: pointer; flex-grow: 1;">Grid</label>
+            <label for="grid" class="toggle-label">Grid</label>
             <label class="switch">
               <input type="checkbox" id="grid" aria-label="Grid">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="show-buildings" style="cursor: pointer; flex-grow: 1;">Show Buildings</label>
+            <label for="show-buildings" class="toggle-label">Show Buildings</label>
             <label class="switch">
               <input type="checkbox" id="show-buildings" checked aria-label="Show Buildings">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="show-edges" style="cursor: pointer; flex-grow: 1;">Show Edges</label>
+            <label for="show-edges" class="toggle-label">Show Edges</label>
             <label class="switch">
               <input type="checkbox" id="show-edges" checked aria-label="Show Edges">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item">
-            <label for="gapless-points" style="cursor: pointer; flex-grow: 1;">Gapless Points</label>
+            <label for="gapless-points" class="toggle-label">Gapless Points</label>
             <label class="switch">
               <input type="checkbox" id="gapless-points" checked aria-label="Gapless Points">
               <span class="slider"></span>
@@ -111,10 +110,10 @@
               <label for="point-size">Point Size</label>
               <span id="point-size-display" style="font-size: 0.8em; color: var(--text-secondary);">3.0</span>
             </div>
-            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" style="width: 100%;" aria-label="Point Size">
+            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" aria-label="Point Size">
           </div>
           <div class="toggle-item">
-            <label for="rotate-to-camera" style="cursor: pointer; flex-grow: 1;">Rotate To Camera</label>
+            <label for="rotate-to-camera" class="toggle-label">Rotate To Camera</label>
             <label class="switch">
               <input type="checkbox" id="rotate-to-camera" aria-label="Rotate To Camera">
               <span class="slider"></span>
@@ -122,8 +121,7 @@
           </div>
           <div class="toggle-item">
             <label for="colormap-select">Colormap</label>
-            <select id="colormap-select" aria-label="Colormap Selection"
-              style="width: 100px; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <select id="colormap-select" aria-label="Colormap Selection" class="colormap-select">
               <option value="turbo">Turbo</option>
               <option value="jet" selected>Jet</option>
               <option value="viridis">Viridis</option>
@@ -144,14 +142,14 @@
                 <label for="colormap-min">Min Value</label>
                 <span id="min-val-display" style="font-size: 0.8em; color: var(--text-secondary);">0</span>
               </div>
-              <input type="range" id="colormap-min" style="width: 100%;" aria-label="Colormap Minimum Value">
+              <input type="range" id="colormap-min" class="range-input" aria-label="Colormap Minimum Value">
             </div>
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-max">Max Value</label>
                 <span id="max-val-display" style="font-size: 0.8em; color: var(--text-secondary);">1</span>
               </div>
-              <input type="range" id="colormap-max" style="width: 100%;" aria-label="Colormap Maximum Value">
+              <input type="range" id="colormap-max" class="range-input" aria-label="Colormap Maximum Value">
             </div>
           </div>
         </div>
