@@ -358,5 +358,9 @@ export async function captureAllScreenshots(
 }
 
 export function updateDownloadButton(downloadBtn: HTMLButtonElement, datasetCount: number) {
-  downloadBtn.disabled = datasetCount === 0;
+  const isDisabled = datasetCount === 0;
+  downloadBtn.disabled = isDisabled;
+  downloadBtn.title = isDisabled
+    ? 'Upload a dataset to enable downloads'
+    : 'Download screenshots';
 }
