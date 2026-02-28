@@ -9,3 +9,7 @@
 ## 2024-05-24 - [Lookup Table Overhead in Tight Loops]
 **Learning:** In extremely hot loops (like per-vertex color calculation), the overhead of `Map.get(key)` can negate the benefits of a precomputed LUT if the computation itself was relatively fast (e.g. polynomial). However, caching the last used LUT reference avoids the `Map.get` cost and restores the performance gain.
 **Action:** When using LUTs in tight loops where the key rarely changes (e.g. `mapName` constant for 1M points), always implement a "last used" cache or pass the LUT directly instead of looking it up every iteration.
+
+## 2025-02-14 - [InstancedMesh Batch Array Mutations]
+**Learning:** For rendering very large datasets (e.g. 1M+ point clouds or voxels), updating Three.js `InstancedMesh` via `.setMatrixAt()` and `.setColorAt()` combined with `Object3D.updateMatrix()` causes severe frame drops and massive allocations due to object and matrix instantiation per point.
+**Action:** To optimize `InstancedMesh` setup, calculate transformations directly and assign them to 16-element blocks on the `instanceMatrix.array` (Float32Array) and `instanceColor.array`. Remember to apply correct color space conversions when assigning to `instanceColor.array` by using a shared `Color` scratch object's `setRGB` before pulling `.r`/`.g`/`.b`.
