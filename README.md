@@ -1,61 +1,49 @@
-# Eddy3D Visualizer
+# Plot OpenFOAM Residuals
 
-[Visit the Website](https://viz.eddy3d.com/)
+A Streamlit application to visualize OpenFOAM residuals from `residual.dat` files.
 
-A web-based visualization tool for Eddy3D simulation results. This application allows users to upload CSV data and visualize 3D airflow/environmental patterns in interactively.
+[Demo Application](https://bit.ly/plot-of-residuals)
 
 ## Features
 
-- **Data Import**: Upload `.csv` result files directly from the UI.
-- **Interactive 3D View**:
-  - **Perspective & Top Views**: Switch between perspective and orthographic top-down views.
-  - **Auto-Rotation**: Automatically rotate the model for presentations.
-  - **Grid & Geometry Controls**: Toggle visibility of the reference grid, building geometry, and edge outlines.
-- **Visualization Settings**:
-  - **Point Size Control**: Adjust the size of data points for better visibility.
-  - **Colormaps**: Choose from scientific colormaps including **Turbo**, **Jet** (default), **Viridis**, **Inferno**, and **Magma**.
+- **Interactive Plots**: Visualize residuals using Altair for interactive exploration.
+- **Static Plots**: Generate high-quality static plots using Matplotlib.
+- **Data Inspection**: View raw data in a tabular format.
+- **Multiple Files**: Upload and compare multiple residual files simultaneously.
+- **Log Scale**: Automatically plots residuals on a logarithmic scale.
 
-## Getting Started
+## Installation
 
-### Prerequisites
+This project uses `uv` for dependency management.
 
-- [Node.js](https://nodejs.org/) (`>=20.19.0` or `>=22.12.0`; Node 22 LTS recommended)
-
-### Local Development
-
-1.  Navigate to the `gui` directory:
+1.  **Install uv**:
     ```bash
-    cd gui
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-2.  Install dependencies:
+2.  **Clone the repository**:
     ```bash
-    npm install
+    git clone <repository-url>
+    cd Plot-OpenFOAM-Residuals
     ```
 
-3.  Start the development server:
+3.  **Install dependencies**:
     ```bash
-    npm run dev
+    uv sync
     ```
 
-4.  Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173/`).
+## Usage
 
-## Building for Production
-
-To create a production build:
+Run the Streamlit application:
 
 ```bash
-cd gui
-npm run build
+uv run streamlit run streamlit_app.py
 ```
 
-The output will be in `gui/dist`.
+Open your browser and navigate to the URL provided in the terminal (usually `http://localhost:8501`).
 
-## Deployment
+## How to Use
 
-This repository is configured to automatically deploy to **GitHub Pages**.
-
--   The configuration file can be found at `gui/vite.config.ts`.
--   The GitHub Actions workflow is located at `.github/workflows/deploy.yml`.
-
-When changes are pushed to the `main` branch, the site is rebuilt and deployed to the `gh-pages` branch.
+1.  **Upload Files**: Drag and drop your `residual.dat` files into the file uploader. These files are typically found in the `postProcessing` directory of your OpenFOAM case.
+2.  **Adjust Settings**: Use the sidebar to change the figure width and height for Matplotlib plots.
+3.  **Explore**: Switch between the "Altair", "Matplotlib", and "Dataframe" tabs to view the data in different formats.

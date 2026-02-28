@@ -1,0 +1,3 @@
+## 2024-03-XX - Streamlit Rerender Performance
+**Learning:** In Streamlit, the entire script reruns upon interaction. Doing expensive IO/parsing (like `fs.pre_parse()`) inside individual tabs for the *same* file causes unnecessary redundant processing, as the file isn't cached between tabs but is instead read multiple times in the same script execution.
+**Action:** When handling user uploads in Streamlit, parse and process data exactly once per upload event and store the result in an intermediate variable/dictionary, then pass that parsed data down to UI components (tabs/plots) to avoid N-times redundant operations.
