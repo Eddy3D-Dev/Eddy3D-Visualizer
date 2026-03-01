@@ -39,7 +39,7 @@
               <button id="download-screenshots" class="download-btn" disabled title="Upload a dataset to enable downloads">
                 Download Screenshots
               </button>
-              <select id="dpi-select" class="dpi-select" aria-label="Screenshot DPI">
+              <select id="dpi-select" class="dpi-select" disabled aria-label="Screenshot DPI" title="Upload a dataset to enable downloads">
                 <option value="100">100px</option>
                 <option value="150" selected>150px</option>
                 <option value="300">300px</option>
@@ -48,7 +48,7 @@
           </div>
           <div class="select-container">
             <label for="results-select">Results:</label>
-            <select id="results-select" class="results-select">
+            <select id="results-select" class="results-select" disabled title="Upload a dataset to select results">
               <option value="" disabled selected>Select a result set...</option>
             </select>
           </div>
@@ -105,12 +105,12 @@
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item" id="point-size-control" style="flex-direction: column; align-items: flex-start;">
+          <div class="toggle-item disabled" id="point-size-control" style="flex-direction: column; align-items: flex-start;" title="Disable 'Gapless Points' to adjust manually">
             <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
               <label for="point-size">Point Size</label>
               <span id="point-size-display" style="font-size: 0.8em; color: var(--text-secondary);">3.0</span>
             </div>
-            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" aria-label="Point Size">
+            <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" disabled aria-label="Point Size" title="Disable 'Gapless Points' to adjust manually">
           </div>
           <div class="toggle-item">
             <label for="rotate-to-camera" class="toggle-label">Rotate To Camera</label>

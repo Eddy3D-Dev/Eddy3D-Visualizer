@@ -221,10 +221,22 @@ function setPointSizeControlState(disabled: boolean) {
   const pointSizeSlider = document.getElementById('point-size') as HTMLInputElement | null;
   if (pointSizeSlider) {
     pointSizeSlider.disabled = disabled;
+    if (disabled) {
+      pointSizeSlider.title = "Disable 'Gapless Points' to adjust manually";
+    } else {
+      pointSizeSlider.removeAttribute('title');
+    }
   }
 
   const pointSizeControl = document.getElementById('point-size-control');
-  pointSizeControl?.classList.toggle('disabled', disabled);
+  if (pointSizeControl) {
+    pointSizeControl.classList.toggle('disabled', disabled);
+    if (disabled) {
+      pointSizeControl.title = "Disable 'Gapless Points' to adjust manually";
+    } else {
+      pointSizeControl.removeAttribute('title');
+    }
+  }
 }
 
 function readPersistedViewSettings(): Partial<PersistedViewSettings> {
