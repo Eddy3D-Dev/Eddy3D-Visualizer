@@ -730,6 +730,10 @@ function updateSensorColors(mapName: ColormapName) {
   const pointColors = sensorPoints ? sensorPoints.geometry.attributes.color.array as Float32Array : null;
   const colorScratch = new THREE.Color();
 
+  // ⚡ Bolt Optimization: Batch update `instanceColor` via direct Float32Array mutation
+  // Calling .setColorAt() in a tight loop creates massive overhead for 100k+ points
+  const instanceColorArray = fixedSensorPoints?.instanceColor?.array as Float32Array | undefined;
+
   activeSensorData.forEach((d, i) => {
     const normalized = (d.val - userMin) / (userMax - userMin || 1);
     getColormapColor(normalized, mapName, colorScratch);
@@ -740,9 +744,12 @@ function updateSensorColors(mapName: ColormapName) {
       pointColors[i * 3 + 2] = colorScratch.b;
     }
 
-    if (fixedSensorPoints) {
+    if (instanceColorArray) {
+      // Apply setRGB to maintain correct color space conversion, then extract
       fixedPointColor.setRGB(colorScratch.r, colorScratch.g, colorScratch.b);
-      fixedSensorPoints.setColorAt(i, fixedPointColor);
+      instanceColorArray[i * 3] = fixedPointColor.r;
+      instanceColorArray[i * 3 + 1] = fixedPointColor.g;
+      instanceColorArray[i * 3 + 2] = fixedPointColor.b;
     }
   });
 

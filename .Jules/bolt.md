@@ -13,3 +13,7 @@
 ## 2025-02-14 - [InstancedMesh Batch Array Mutations]
 **Learning:** For rendering very large datasets (e.g. 1M+ point clouds or voxels), updating Three.js `InstancedMesh` via `.setMatrixAt()` and `.setColorAt()` combined with `Object3D.updateMatrix()` causes severe frame drops and massive allocations due to object and matrix instantiation per point.
 **Action:** To optimize `InstancedMesh` setup, calculate transformations directly and assign them to 16-element blocks on the `instanceMatrix.array` (Float32Array) and `instanceColor.array`. Remember to apply correct color space conversions when assigning to `instanceColor.array` by using a shared `Color` scratch object's `setRGB` before pulling `.r`/`.g`/`.b`.
+
+## 2025-03-01 - [InstancedMesh Batch Array Mutations for Colors]
+**Learning:** For rendering very large datasets (e.g. 1M+ point clouds or voxels), updating Three.js `InstancedMesh` via `.setColorAt()` combined with `Object3D.updateMatrix()` inside a tight loop creates massive overhead.
+**Action:** Extract `fixedSensorPoints.instanceColor.array` outside the loop, and inside the loop, directly assign `.r`, `.g`, `.b` components into the array.
