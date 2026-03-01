@@ -188,6 +188,14 @@ export function updateResultsDropdown(
     option.text = key;
     select.appendChild(option);
   });
+
+  const isDisabled = datasetNames.length === 0;
+  select.disabled = isDisabled;
+  if (isDisabled) {
+    select.title = 'Upload a dataset to select results';
+  } else {
+    select.removeAttribute('title');
+  }
 }
 
 export function handleFileUpload(
