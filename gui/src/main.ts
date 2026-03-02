@@ -56,7 +56,7 @@ const projectionScratchA = new THREE.Vector3();
 const projectionScratchB = new THREE.Vector3();
 const gaplessPointX = new THREE.Vector3();
 const gaplessPointY = new THREE.Vector3();
-const fixedPointColor = new THREE.Color();
+
 
 interface PersistedViewSettings {
   topView: boolean;
@@ -596,12 +596,11 @@ function renderDataset(name: string) {
     instanceMatrixArray[mOff + 13] = point.y;
     instanceMatrixArray[mOff + 14] = point.z;
 
-    // Colors - apply setRGB to maintain color space conversion
+    // ⚡ Bolt Optimization: Use already converted linear values from `colors` array
     const cOff = i * 3;
-    fixedPointColor.setRGB(colors[cOff], colors[cOff + 1], colors[cOff + 2]);
-    instanceColorArray[cOff] = fixedPointColor.r;
-    instanceColorArray[cOff + 1] = fixedPointColor.g;
-    instanceColorArray[cOff + 2] = fixedPointColor.b;
+    instanceColorArray[cOff] = colors[cOff];
+    instanceColorArray[cOff + 1] = colors[cOff + 1];
+    instanceColorArray[cOff + 2] = colors[cOff + 2];
   }
 
   fixedMesh.instanceMatrix.needsUpdate = true;
@@ -757,11 +756,10 @@ function updateSensorColors(mapName: ColormapName) {
     }
 
     if (instanceColorArray) {
-      // Apply setRGB to maintain correct color space conversion, then extract
-      fixedPointColor.setRGB(colorScratch.r, colorScratch.g, colorScratch.b);
-      instanceColorArray[i * 3] = fixedPointColor.r;
-      instanceColorArray[i * 3 + 1] = fixedPointColor.g;
-      instanceColorArray[i * 3 + 2] = fixedPointColor.b;
+      // ⚡ Bolt Optimization: assign directly since colorScratch is already converted
+      instanceColorArray[i * 3] = colorScratch.r;
+      instanceColorArray[i * 3 + 1] = colorScratch.g;
+      instanceColorArray[i * 3 + 2] = colorScratch.b;
     }
   });
 

@@ -17,3 +17,7 @@
 ## 2025-03-01 - [InstancedMesh Batch Array Mutations for Colors]
 **Learning:** For rendering very large datasets (e.g. 1M+ point clouds or voxels), updating Three.js `InstancedMesh` via `.setColorAt()` combined with `Object3D.updateMatrix()` inside a tight loop creates massive overhead.
 **Action:** Extract `fixedSensorPoints.instanceColor.array` outside the loop, and inside the loop, directly assign `.r`, `.g`, `.b` components into the array.
+
+## 2025-03-02 - [Redundant Color Conversions in Rendering Loops]
+**Learning:** Three.js `.setRGB(r, g, b)` inherently assumes sRGB input and converts it to linear space. When assigning colors from colormaps in tight loops (like `renderDataset` or `updateSensorColors`), the `colorScratch` already contains linear values. Repeatedly passing these back through `.setRGB` on another color object causes a redundant double conversion, breaking color accuracy and creating unnecessary performance overhead (e.g., adding ~20-30ms per 1M points).
+**Action:** When working with colors that have already been converted by Three.js (like `colorScratch.r/g/b`), assign them directly to arrays (`colors` or `instanceColor.array`) without passing them through `.setRGB` again.
