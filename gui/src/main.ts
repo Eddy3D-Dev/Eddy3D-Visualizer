@@ -964,7 +964,8 @@ const uiContainer = document.getElementById('ui-container');
 
 menuToggle?.addEventListener('click', () => {
   menuToggle.classList.toggle('open');
-  uiContainer?.classList.toggle('sidebar-open');
+  const isOpen = uiContainer?.classList.toggle('sidebar-open');
+  menuToggle.setAttribute('aria-expanded', String(isOpen));
 });
 
 applyPersistedViewSettings();
@@ -974,6 +975,7 @@ canvasContainer.addEventListener('click', () => {
   if (uiContainer?.classList.contains('sidebar-open')) {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
+    menuToggle?.setAttribute('aria-expanded', 'false');
   }
 });
 
