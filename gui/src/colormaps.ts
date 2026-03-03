@@ -13,6 +13,22 @@ export function getTurboColor(v: number, target?: THREE.Color): THREE.Color {
   return color;
 }
 
+export function getColormapLUT(mapName: ColormapName): Float32Array {
+  let lut: Float32Array;
+  if (mapName === lastMapName && lastLut) {
+    lut = lastLut;
+  } else {
+    lut = colormapCache.get(mapName)!;
+    if (!lut) {
+      lut = generateLUT(mapName);
+      colormapCache.set(mapName, lut);
+    }
+    lastMapName = mapName;
+    lastLut = lut;
+  }
+  return lut;
+}
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
@@ -90,7 +106,7 @@ export function getInfernoColor(t: number, target?: THREE.Color) { return lerpCo
 
 // ⚡ Bolt Optimization: Cache colormaps in a Look-Up Table (LUT)
 // This avoids expensive polynomial evaluations and linear interpolation on every pixel/point.
-const LUT_SIZE = 1024;
+export const LUT_SIZE = 1024;
 const colormapCache = new Map<ColormapName, Float32Array>();
 let lastMapName: ColormapName | null = null;
 let lastLut: Float32Array | null = null;
@@ -116,20 +132,7 @@ function generateLUT(mapName: ColormapName): Float32Array {
 }
 
 export function getColormapColor(t: number, mapName: ColormapName, target?: THREE.Color): THREE.Color {
-  let lut: Float32Array;
-
-  // Fast path: avoid Map lookup if using same colormap as last call
-  if (mapName === lastMapName && lastLut) {
-    lut = lastLut;
-  } else {
-    lut = colormapCache.get(mapName)!;
-    if (!lut) {
-      lut = generateLUT(mapName);
-      colormapCache.set(mapName, lut);
-    }
-    lastMapName = mapName;
-    lastLut = lut;
-  }
+  const lut = getColormapLUT(mapName);
 
   const color = target || new THREE.Color();
   const index = Math.floor(Math.max(0, Math.min(1, t)) * (LUT_SIZE - 1));
