@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
-import { getColormapColor, type ColormapName } from './colormaps';
+import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
 import { 
@@ -530,20 +530,26 @@ function renderDataset(name: string) {
   const colors = new Float32Array(activeSensorData.length * 3);
 
   const mapName = (document.getElementById('colormap-select') as HTMLSelectElement)?.value || 'jet';
-  const colorScratch = new THREE.Color();
 
-  activeSensorData.forEach((d, i) => {
-    positions[i * 3] = d.x;
-    positions[i * 3 + 1] = d.y;
-    positions[i * 3 + 2] = d.z;
+  // ⚡ Bolt Optimization: Look up the raw Float32Array LUT once to avoid instantiating/updating THREE.Color per point
+  const lut = getColormapLUT(mapName as ColormapName);
+  const dataLen = activeSensorData.length;
+  const valRange = userMax - userMin || 1;
 
-    const normalized = (d.val - userMin) / (userMax - userMin || 1);
-    getColormapColor(normalized, mapName as ColormapName, colorScratch);
+  for (let i = 0; i < dataLen; i++) {
+    const d = activeSensorData[i];
+    const i3 = i * 3;
+    positions[i3] = d.x;
+    positions[i3 + 1] = d.y;
+    positions[i3 + 2] = d.z;
 
-    colors[i * 3] = colorScratch.r;
-    colors[i * 3 + 1] = colorScratch.g;
-    colors[i * 3 + 2] = colorScratch.b;
-  });
+    const normalized = (d.val - userMin) / valRange;
+    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
+
+    colors[i3] = lut[lutIdx];
+    colors[i3 + 1] = lut[lutIdx + 1];
+    colors[i3 + 2] = lut[lutIdx + 2];
+  }
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -739,29 +745,37 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
 function updateSensorColors(mapName: ColormapName) {
   if (activeSensorData.length === 0) return;
   const pointColors = sensorPoints ? sensorPoints.geometry.attributes.color.array as Float32Array : null;
-  const colorScratch = new THREE.Color();
 
   // ⚡ Bolt Optimization: Batch update `instanceColor` via direct Float32Array mutation
   // Calling .setColorAt() in a tight loop creates massive overhead for 100k+ points
   const instanceColorArray = fixedSensorPoints?.instanceColor?.array as Float32Array | undefined;
 
-  activeSensorData.forEach((d, i) => {
-    const normalized = (d.val - userMin) / (userMax - userMin || 1);
-    getColormapColor(normalized, mapName, colorScratch);
+  const lut = getColormapLUT(mapName);
+  const dataLen = activeSensorData.length;
+  const valRange = userMax - userMin || 1;
+
+  for (let i = 0; i < dataLen; i++) {
+    const d = activeSensorData[i];
+    const normalized = (d.val - userMin) / valRange;
+    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
+    const r = lut[lutIdx];
+    const g = lut[lutIdx + 1];
+    const b = lut[lutIdx + 2];
+    const i3 = i * 3;
 
     if (pointColors) {
-      pointColors[i * 3] = colorScratch.r;
-      pointColors[i * 3 + 1] = colorScratch.g;
-      pointColors[i * 3 + 2] = colorScratch.b;
+      pointColors[i3] = r;
+      pointColors[i3 + 1] = g;
+      pointColors[i3 + 2] = b;
     }
 
     if (instanceColorArray) {
       // ⚡ Bolt Optimization: assign directly since colorScratch is already converted
-      instanceColorArray[i * 3] = colorScratch.r;
-      instanceColorArray[i * 3 + 1] = colorScratch.g;
-      instanceColorArray[i * 3 + 2] = colorScratch.b;
+      instanceColorArray[i3] = r;
+      instanceColorArray[i3 + 1] = g;
+      instanceColorArray[i3 + 2] = b;
     }
-  });
+  }
 
   if (sensorPoints) {
     sensorPoints.geometry.attributes.color.needsUpdate = true;
