@@ -189,7 +189,8 @@ h1 {
   align-items: stretch;
 }
 
-.download-row .download-btn {
+.download-row .download-btn,
+.download-row .custom-file-upload {
   flex: 1;
 }
 
