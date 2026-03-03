@@ -8,3 +8,7 @@
 ## 2026-03-02 - Mobile Menu ARIA States
 **Learning:** The mobile menu toggle button (`#menu-toggle`) visually opened and closed the sidebar but lacked the `aria-expanded` attribute, leaving screen reader users unaware of the state change. It is crucial to dynamically update `aria-expanded` to reflect visibility state.
 **Action:** Ensure that UI elements controlling off-canvas menus or sidebars have an initial `aria-expanded="false"` and dynamically toggle it to `"true"` when open via JS.
+
+## 2026-03-03 - File vs Folder Upload UX
+**Learning:** Providing a single 'Upload Folder' input creates unnecessary friction for users who just want to visualize a single data file. Even when backend/JS logic supports individual files, missing UI elements block user workflows.
+**Action:** Always provide side-by-side 'File' and 'Folder' upload options when an application supports processing both individual items and directories.

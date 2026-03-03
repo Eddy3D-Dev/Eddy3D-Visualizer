@@ -28,11 +28,16 @@
 
         <div class="control-group">
           <div class="select-container">
-
-            <label for="folder-upload" class="custom-file-upload">
-              Upload Folder
-              <input type="file" id="folder-upload" webkitdirectory directory multiple class="sr-only">
-            </label>
+            <div class="download-row">
+              <label for="csv-upload" class="custom-file-upload" title="Upload individual CSV files">
+                Upload Files
+                <input type="file" id="csv-upload" accept=".csv" multiple class="sr-only">
+              </label>
+              <label for="folder-upload" class="custom-file-upload" title="Upload a folder of CSV files">
+                Upload Folder
+                <input type="file" id="folder-upload" webkitdirectory directory multiple class="sr-only">
+              </label>
+            </div>
           </div>
           <div class="select-container">
             <div class="download-row">
