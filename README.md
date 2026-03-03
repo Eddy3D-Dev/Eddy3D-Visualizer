@@ -1,7 +1,9 @@
 # Eddy3D Visualizer
 
-- [Main Deployment](https://viz.eddy3d.com/)
-- [Dev Deployment](https://dev.viz.eddy3d.com/)
+| Deployment | Link | Status |
+| --- | --- | --- |
+| Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![Main Status](https://img.shields.io/badge/main-passing-brightgreen)](https://viz.eddy3d.com/) |
+| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![Dev Status](https://img.shields.io/badge/dev-passing-brightgreen)](https://dev.viz.eddy3d.com/) |
 
 A web-based visualization tool for Eddy3D simulation results. This application allows users to upload CSV data and visualize 3D airflow/environmental patterns in interactively.
 
@@ -16,7 +18,8 @@ A web-based visualization tool for Eddy3D simulation results. This application a
   - **Point Size Control**: Adjust the size of data points for better visibility.
   - **Colormaps**: Choose from scientific colormaps including **Turbo**, **Jet** (default), **Viridis**, **Inferno**, and **Magma**.
 
-## Getting Started
+<details>
+<summary>Getting Started</summary>
 
 ### Prerequisites
 
@@ -40,6 +43,7 @@ A web-based visualization tool for Eddy3D simulation results. This application a
     ```
 
 4.  Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173/`).
+</details>
 
 ## Building for Production
 
