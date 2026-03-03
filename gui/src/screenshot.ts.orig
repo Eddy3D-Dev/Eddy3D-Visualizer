@@ -61,7 +61,6 @@ export function setCameraTopView(config: ScreenshotConfig): Promise<void> {
       // Also update perspective camera if that's active
       if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
         const dist = Math.max(sceneWidth, sceneHeight) * 1.2;
-        cameras.perspectiveCamera.aspect = aspect;
         cameras.activeCamera.position.set(center.x, center.y - 0.001, center.z + dist);
         cameras.activeCamera.lookAt(center);
         cameras.activeCamera.updateProjectionMatrix();
@@ -114,7 +113,6 @@ export function setCameraPerspective(config: ScreenshotConfig): Promise<void> {
 
       // Also update perspective camera
       if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
-        cameras.perspectiveCamera.aspect = aspect;
         cameras.activeCamera.updateProjectionMatrix();
       }
     }
@@ -210,7 +208,7 @@ export async function captureAllScreenshots(
     config.renderer.setPixelRatio(1);
 
     // Resize renderer to target resolution (square for consistent output)
-    config.renderer.setSize(targetSize, targetSize, false);
+    config.renderer.setSize(targetSize, targetSize);
 
     const zip = new JSZip();
     const topViewFolder = zip.folder('Top View');
@@ -332,7 +330,7 @@ export async function captureAllScreenshots(
 
     // Restore original canvas size and pixel ratio
     config.renderer.setPixelRatio(originalPixelRatio);
-    config.renderer.setSize(originalWidth, originalHeight, false);
+    config.renderer.setSize(originalWidth, originalHeight);
     config.zoomToFit();
 
     downloadBtn.textContent = '✓ Downloaded!';
@@ -347,7 +345,7 @@ export async function captureAllScreenshots(
 
     // Restore original canvas size and pixel ratio on error
     config.renderer.setPixelRatio(originalPixelRatio);
-    config.renderer.setSize(originalWidth, originalHeight, false);
+    config.renderer.setSize(originalWidth, originalHeight);
     config.zoomToFit();
 
     downloadBtn.textContent = '✗ Failed';
