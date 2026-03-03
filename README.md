@@ -1,6 +1,7 @@
 # Eddy3D Visualizer
 
-[Visit the Website](https://viz.eddy3d.com/)
+- [Main Deployment](https://viz.eddy3d.com/)
+- [Dev Deployment](https://dev.viz.eddy3d.com/)
 
 A web-based visualization tool for Eddy3D simulation results. This application allows users to upload CSV data and visualize 3D airflow/environmental patterns in interactively.
 
