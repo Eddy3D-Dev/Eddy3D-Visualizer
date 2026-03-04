@@ -12,3 +12,11 @@
 ## 2026-03-03 - File vs Folder Upload UX
 **Learning:** Providing a single 'Upload Folder' input creates unnecessary friction for users who just want to visualize a single data file. Even when backend/JS logic supports individual files, missing UI elements block user workflows.
 **Action:** Always provide side-by-side 'File' and 'Folder' upload options when an application supports processing both individual items and directories.
+
+## 2026-03-04 - Consistent Focus Indicators
+**Learning:** Default browser focus rings are often inconsistent across different elements (like `<select>`, `<input type="range">`, and `<button>`) and can suffer from poor contrast against custom backgrounds. Relying on default focus outlines breaks the visual cohesiveness of the app and can harm accessibility for keyboard users who rely on clear focus indicators.
+**Action:** Always define consistent `:focus-visible` styles explicitly in the CSS (e.g., using `outline: 2px solid var(--text-primary); outline-offset: 2px;`) for all interactive elements to ensure a unified and accessible keyboard navigation experience.
+
+## 2026-03-04 - Screen Reader Progress Announcements
+**Learning:** When a button's text dynamically updates to show progress (like "Capturing 1/4..."), screen readers do not automatically announce this change, leaving visually impaired users unaware of ongoing background tasks or state changes.
+**Action:** Add `aria-live="polite"` to elements (like buttons or status regions) whose text updates dynamically to indicate progress, ensuring screen readers announce the changes without interrupting the user.
