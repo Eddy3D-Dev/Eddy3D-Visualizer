@@ -205,6 +205,15 @@ h1 {
   min-width: 70px;
 }
 
+.dpi-select:focus-visible,
+.results-select:focus-visible,
+.colormap-select:focus-visible,
+.range-input:focus-visible,
+.download-btn:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
 
 .toggle-item {
   display: flex;
