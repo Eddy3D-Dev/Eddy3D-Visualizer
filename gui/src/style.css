@@ -209,7 +209,8 @@ h1 {
 .results-select:focus-visible,
 .colormap-select:focus-visible,
 .range-input:focus-visible,
-.download-btn:focus-visible {
+.download-btn:focus-visible,
+.menu-toggle:focus-visible {
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
 }
