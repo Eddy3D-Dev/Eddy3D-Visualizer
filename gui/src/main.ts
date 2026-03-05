@@ -479,10 +479,13 @@ function renderDataset(name: string) {
 
   let minVal = Infinity;
   let maxVal = -Infinity;
-  referenceData.forEach(d => {
+  const refLen = referenceData.length;
+  // ⚡ Bolt Optimization: Use explicit for loop instead of forEach to reduce GC pressure
+  for (let i = 0; i < refLen; i++) {
+    const d = referenceData[i];
     if (d.val < minVal) minVal = d.val;
     if (d.val > maxVal) maxVal = d.val;
-  });
+  }
   dataMin = minVal;
   dataMax = maxVal;
   userMin = dataMin;
@@ -629,7 +632,14 @@ function renderDataset(name: string) {
     edgesVoxels = null;
   }
 
-  const validBuildings = activeSensorData.filter(d => d.h > 0);
+  // ⚡ Bolt Optimization: Use explicit for loop with push instead of filter
+  const validBuildings: typeof activeSensorData = [];
+  const activeLen = activeSensorData.length;
+  for (let i = 0; i < activeLen; i++) {
+    if (activeSensorData[i].h > 0) {
+      validBuildings.push(activeSensorData[i]);
+    }
+  }
   if (validBuildings.length > 0) {
     const boxGeo = new THREE.BoxGeometry(2, 2, 1);
     const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -684,18 +694,22 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
   // ⚡ Bolt Optimization: Use nested Map<number, Map<number, number>> to avoid string allocation
   const hMap = new Map<number, Map<number, number>>();
 
-  validBuildings.forEach(d => {
+  const validBuildingsLen = validBuildings.length;
+  // ⚡ Bolt Optimization: Use explicit for loops instead of forEach
+  for (let i = 0; i < validBuildingsLen; i++) {
+    const d = validBuildings[i];
     let xMap = hMap.get(d.x);
     if (!xMap) {
       xMap = new Map<number, number>();
       hMap.set(d.x, xMap);
     }
     xMap.set(d.y, d.h);
-  });
+  }
 
   const getH = (x: number, y: number) => hMap.get(x)?.get(y) || 0;
 
-  validBuildings.forEach(d => {
+  for (let i = 0; i < validBuildingsLen; i++) {
+    const d = validBuildings[i];
     const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
 
     const hN = getH(x, y + 2);
@@ -731,7 +745,7 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
 
     const hSW = getH(x - 2, y - 2);
     if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
-  });
+  }
 
   const edgesGeo = new THREE.BufferGeometry();
   edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
