@@ -548,6 +548,10 @@ function renderDataset(name: string) {
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
+  // ⚡ Bolt Optimization: Pre-calculate scaling factor and use bitwise OR for integer truncation instead of Math.floor.
+  const scale = (LUT_SIZE - 1) / valRange;
+  const maxLut = LUT_SIZE - 1;
+
   for (let i = 0; i < dataLen; i++) {
     const d = activeSensorData[i];
     const i3 = i * 3;
@@ -555,8 +559,8 @@ function renderDataset(name: string) {
     positions[i3 + 1] = d.y;
     positions[i3 + 2] = d.z;
 
-    const normalized = (d.val - userMin) / valRange;
-    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
+    const norm = (d.val - userMin) * scale;
+    const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
 
     colors[i3] = lut[lutIdx];
     colors[i3 + 1] = lut[lutIdx + 1];
@@ -777,23 +781,49 @@ function updateSensorColors(mapName: ColormapName) {
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
-  for (let i = 0; i < dataLen; i++) {
-    const d = activeSensorData[i];
-    const normalized = (d.val - userMin) / valRange;
-    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
-    const r = lut[lutIdx];
-    const g = lut[lutIdx + 1];
-    const b = lut[lutIdx + 2];
-    const i3 = i * 3;
+  // ⚡ Bolt Optimization: Pre-calculate scaling factor and hoist conditionals out of the hot loop
+  const scale = (LUT_SIZE - 1) / valRange;
+  const maxLut = LUT_SIZE - 1;
 
-    if (pointColors) {
+  if (pointColors && instanceColorArray) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
+
+      pointColors[i3] = r;
+      pointColors[i3 + 1] = g;
+      pointColors[i3 + 2] = b;
+
+      instanceColorArray[i3] = r;
+      instanceColorArray[i3 + 1] = g;
+      instanceColorArray[i3 + 2] = b;
+    }
+  } else if (pointColors) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
+
       pointColors[i3] = r;
       pointColors[i3 + 1] = g;
       pointColors[i3 + 2] = b;
     }
+  } else if (instanceColorArray) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
 
-    if (instanceColorArray) {
-      // ⚡ Bolt Optimization: assign directly since colorScratch is already converted
       instanceColorArray[i3] = r;
       instanceColorArray[i3 + 1] = g;
       instanceColorArray[i3 + 2] = b;
