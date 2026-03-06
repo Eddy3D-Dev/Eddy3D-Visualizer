@@ -434,8 +434,17 @@ const csvLoader = new CSVLoader(
   () => {
     updateResultsDropdownUI();
     updateDownloadButtonUI();
+    updateEmptyStateUI();
   }
 );
+
+function updateEmptyStateUI() {
+  const emptyState = document.getElementById('empty-state');
+  if (emptyState) {
+    const hasData = csvLoader.getDatasetCount() > 0;
+    emptyState.style.display = hasData ? 'none' : 'flex';
+  }
+}
 
 function updateResultsDropdownUI() {
   const select = document.getElementById('results-select') as HTMLSelectElement;
@@ -928,6 +937,7 @@ function loadPlaceholder() {
     })
     .catch(err => {
       console.warn("Could not load placeholder:", err);
+      updateEmptyStateUI();
       zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
     });
 }
