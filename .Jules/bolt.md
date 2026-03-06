@@ -29,3 +29,7 @@
 ## 2024-03-05 - [Array Iteration Methods Overhead]
 **Learning:** Using `Array.prototype.forEach` and `Array.prototype.filter` inside core data processing functions (`renderDataset`) introduces measurable overhead (function calls, closures, GC pressure) on large datasets (>100k points). Explicit `for` loops are consistently 2x to 4x faster for these operations.
 **Action:** Always prefer explicit `for` loops when iterating over large datasets in hot paths (like initial render parsing or updates).
+
+## 2025-02-17 - [Hot Loop Float32Array Colormap Indexing]
+**Learning:** In hot loops updating 100k+ point colors, executing \`Math.floor(Math.max(0, Math.min(1, normalized)) * maxIdx)\` is significantly slower than using bitwise OR \`| 0\` for integer truncation combined with a pre-calculated scale factor. Branch conditions (\`if (pointColors)\`) inside the loop also cause substantial overhead.
+**Action:** Extract branch conditions to the outside of hot loops (\`if (A) { loop } else { loop }\`). Pre-calculate the scale factor (\`(lutSize - 1) / valRange\`) and multiply it, then use \`(value | 0)\` to truncate to an integer for array indexing.
