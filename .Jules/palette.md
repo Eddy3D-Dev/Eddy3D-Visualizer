@@ -20,3 +20,11 @@
 ## 2026-03-04 - Screen Reader Progress Announcements
 **Learning:** When a button's text dynamically updates to show progress (like "Capturing 1/4..."), screen readers do not automatically announce this change, leaving visually impaired users unaware of ongoing background tasks or state changes.
 **Action:** Add `aria-live="polite"` to elements (like buttons or status regions) whose text updates dynamically to indicate progress, ensuring screen readers announce the changes without interrupting the user.
+
+## 2026-03-05 - Missing Empty States
+**Learning:** Presenting a blank canvas or empty main content area when no data is loaded creates ambiguity for users. They might assume the application is broken or still loading.
+**Action:** Always provide an explicitly designed empty state UI overlay with a clear icon, a brief explanation, and actionable guidance (e.g., "Upload a CSV file...") for the main content area when it has no data to display.
+
+## 2026-03-05 - Semantic Document Structure
+**Learning:** Using generic `<div>` tags for top-level visual headers (like logos) and main content areas (like a WebGL canvas container) breaks document structure for screen readers, making it harder for users to navigate the page effectively.
+**Action:** Always use semantic HTML tags. Wrap top-level logos in an `<h1>` (with appropriate `alt` text), and wrap the primary interactive content area in a `<main>` tag with an `aria-label`.
