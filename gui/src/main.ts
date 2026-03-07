@@ -176,23 +176,16 @@ function updateFixedPointMatrices() {
 
   // ⚡ Bolt Optimization: Batch update `instanceMatrix` via direct Float32Array mutation
   // Updating instance matrices directly by writing 16-float blocks is 3-5x faster than using `Object3D.updateMatrix()`.
+  // Further optimized to only update the x and y scale components, as translations and other scales never change after creation.
   const instanceMatrixArray = fixedSensorPoints.instanceMatrix.array;
-  instanceMatrixArray.fill(0);
 
-  for (let i = 0; i < activeSensorData.length; i += 1) {
-    const point = activeSensorData[i];
+  const len = activeSensorData.length;
+  for (let i = 0; i < len; i += 1) {
     const mOff = i * 16;
 
     // Scale components (worldSize, worldSize, 1)
     instanceMatrixArray[mOff + 0] = worldSize;
     instanceMatrixArray[mOff + 5] = worldSize;
-    instanceMatrixArray[mOff + 10] = 1;
-    instanceMatrixArray[mOff + 15] = 1;
-
-    // Translation components (x, y, z)
-    instanceMatrixArray[mOff + 12] = point.x;
-    instanceMatrixArray[mOff + 13] = point.y;
-    instanceMatrixArray[mOff + 14] = point.z;
   }
 
   fixedSensorPoints.instanceMatrix.needsUpdate = true;
@@ -434,8 +427,17 @@ const csvLoader = new CSVLoader(
   () => {
     updateResultsDropdownUI();
     updateDownloadButtonUI();
+    updateEmptyStateUI();
   }
 );
+
+function updateEmptyStateUI() {
+  const emptyState = document.getElementById('empty-state');
+  if (emptyState) {
+    const hasData = csvLoader.getDatasetCount() > 0;
+    emptyState.style.display = hasData ? 'none' : 'flex';
+  }
+}
 
 function updateResultsDropdownUI() {
   const select = document.getElementById('results-select') as HTMLSelectElement;
@@ -479,10 +481,13 @@ function renderDataset(name: string) {
 
   let minVal = Infinity;
   let maxVal = -Infinity;
-  referenceData.forEach(d => {
+  const refLen = referenceData.length;
+  // ⚡ Bolt Optimization: Use explicit for loop instead of forEach to reduce GC pressure
+  for (let i = 0; i < refLen; i++) {
+    const d = referenceData[i];
     if (d.val < minVal) minVal = d.val;
     if (d.val > maxVal) maxVal = d.val;
-  });
+  }
   dataMin = minVal;
   dataMax = maxVal;
   userMin = dataMin;
@@ -536,6 +541,10 @@ function renderDataset(name: string) {
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
+  // ⚡ Bolt Optimization: Pre-calculate scaling factor and use bitwise OR for integer truncation instead of Math.floor.
+  const scale = (LUT_SIZE - 1) / valRange;
+  const maxLut = LUT_SIZE - 1;
+
   for (let i = 0; i < dataLen; i++) {
     const d = activeSensorData[i];
     const i3 = i * 3;
@@ -543,8 +552,8 @@ function renderDataset(name: string) {
     positions[i3 + 1] = d.y;
     positions[i3 + 2] = d.z;
 
-    const normalized = (d.val - userMin) / valRange;
-    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
+    const norm = (d.val - userMin) * scale;
+    const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
 
     colors[i3] = lut[lutIdx];
     colors[i3 + 1] = lut[lutIdx + 1];
@@ -629,7 +638,14 @@ function renderDataset(name: string) {
     edgesVoxels = null;
   }
 
-  const validBuildings = activeSensorData.filter(d => d.h > 0);
+  // ⚡ Bolt Optimization: Use explicit for loop with push instead of filter
+  const validBuildings: typeof activeSensorData = [];
+  const activeLen = activeSensorData.length;
+  for (let i = 0; i < activeLen; i++) {
+    if (activeSensorData[i].h > 0) {
+      validBuildings.push(activeSensorData[i]);
+    }
+  }
   if (validBuildings.length > 0) {
     const boxGeo = new THREE.BoxGeometry(2, 2, 1);
     const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -684,18 +700,22 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
   // ⚡ Bolt Optimization: Use nested Map<number, Map<number, number>> to avoid string allocation
   const hMap = new Map<number, Map<number, number>>();
 
-  validBuildings.forEach(d => {
+  const validBuildingsLen = validBuildings.length;
+  // ⚡ Bolt Optimization: Use explicit for loops instead of forEach
+  for (let i = 0; i < validBuildingsLen; i++) {
+    const d = validBuildings[i];
     let xMap = hMap.get(d.x);
     if (!xMap) {
       xMap = new Map<number, number>();
       hMap.set(d.x, xMap);
     }
     xMap.set(d.y, d.h);
-  });
+  }
 
   const getH = (x: number, y: number) => hMap.get(x)?.get(y) || 0;
 
-  validBuildings.forEach(d => {
+  for (let i = 0; i < validBuildingsLen; i++) {
+    const d = validBuildings[i];
     const x = d.x; const y = d.y; const h = d.h; const s = 1.0;
 
     const hN = getH(x, y + 2);
@@ -731,7 +751,7 @@ function createBuildingEdges(validBuildings: SensorDataPoint[]) {
 
     const hSW = getH(x - 2, y - 2);
     if (checkCorner(hS >= h, hW >= h, hSW >= h)) edgePositions.push(x - s, y - s, 0, x - s, y - s, h);
-  });
+  }
 
   const edgesGeo = new THREE.BufferGeometry();
   edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
@@ -754,23 +774,49 @@ function updateSensorColors(mapName: ColormapName) {
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
-  for (let i = 0; i < dataLen; i++) {
-    const d = activeSensorData[i];
-    const normalized = (d.val - userMin) / valRange;
-    const lutIdx = Math.floor(Math.max(0, Math.min(1, normalized)) * (LUT_SIZE - 1)) * 3;
-    const r = lut[lutIdx];
-    const g = lut[lutIdx + 1];
-    const b = lut[lutIdx + 2];
-    const i3 = i * 3;
+  // ⚡ Bolt Optimization: Pre-calculate scaling factor and hoist conditionals out of the hot loop
+  const scale = (LUT_SIZE - 1) / valRange;
+  const maxLut = LUT_SIZE - 1;
 
-    if (pointColors) {
+  if (pointColors && instanceColorArray) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
+
+      pointColors[i3] = r;
+      pointColors[i3 + 1] = g;
+      pointColors[i3 + 2] = b;
+
+      instanceColorArray[i3] = r;
+      instanceColorArray[i3 + 1] = g;
+      instanceColorArray[i3 + 2] = b;
+    }
+  } else if (pointColors) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
+
       pointColors[i3] = r;
       pointColors[i3 + 1] = g;
       pointColors[i3 + 2] = b;
     }
+  } else if (instanceColorArray) {
+    for (let i = 0; i < dataLen; i++) {
+      const norm = (activeSensorData[i].val - userMin) * scale;
+      const lutIdx = (Math.max(0, Math.min(maxLut, norm)) | 0) * 3;
+      const r = lut[lutIdx];
+      const g = lut[lutIdx + 1];
+      const b = lut[lutIdx + 2];
+      const i3 = i * 3;
 
-    if (instanceColorArray) {
-      // ⚡ Bolt Optimization: assign directly since colorScratch is already converted
       instanceColorArray[i3] = r;
       instanceColorArray[i3 + 1] = g;
       instanceColorArray[i3 + 2] = b;
@@ -867,6 +913,43 @@ document.getElementById('csv-upload')?.addEventListener('change', (e) => {
   });
 });
 
+// Drag and Drop Logic
+let dragCounter = 0;
+canvasContainer.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  canvasContainer.classList.add('drag-over');
+});
+
+canvasContainer.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  canvasContainer.classList.add('drag-over');
+});
+
+canvasContainer.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    canvasContainer.classList.remove('drag-over');
+  }
+});
+
+canvasContainer.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  canvasContainer.classList.remove('drag-over');
+
+  if (e.dataTransfer && e.dataTransfer.files) {
+    handleFileUpload(e.dataTransfer.files, (text, name) => {
+      // Remove placeholder if exists
+      if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
+        csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
+      }
+      processCSVData(text, name);
+    });
+  }
+});
+
 document.getElementById('folder-upload')?.addEventListener('change', (e) => {
   handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
     if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
@@ -914,6 +997,7 @@ function loadPlaceholder() {
     })
     .catch(err => {
       console.warn("Could not load placeholder:", err);
+      updateEmptyStateUI();
       zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
     });
 }
