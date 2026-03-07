@@ -1,0 +1,115 @@
+name: Auto Versioning
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/sync-branches.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Tag and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest release version
+        id: latest
+        run: |
+          # Get the latest stable release tag (vX.Y.Z without pre-release suffix)
+          LATEST=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+          echo "tag=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest stable tag: $LATEST"
+
+      - name: Compute next version
+        id: next
+        run: |
+          LATEST="${{ steps.latest.outputs.tag }}"
+          # Strip the leading 'v'
+          VERSION="${LATEST#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          BRANCH="${{ github.ref_name }}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y%m%d)
+
+          if [ "$BRANCH" = "main" ]; then
+            # Main: bump minor version for a new release
+            NEW_MINOR=$((MINOR + 1))
+            NEW_TAG="v${MAJOR}.${NEW_MINOR}.0"
+            PRERELEASE="false"
+            RELEASE_NAME="Release ${NEW_TAG}"
+          else
+            # Dev: create a pre-release tag with date and sha
+            NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}-dev.${DATE}.${SHORT_SHA}"
+            PRERELEASE="true"
+            RELEASE_NAME="Pre-release ${NEW_TAG} (dev)"
+          fi
+
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "Next tag: $NEW_TAG"
+
+      - name: Create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.next.outputs.tag }}
+          git push origin ${{ steps.next.outputs.tag }}
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '${{ steps.next.outputs.tag }}';
+            const isPrerelease = '${{ steps.next.outputs.prerelease }}' === 'true';
+            const releaseName = '${{ steps.next.outputs.release_name }}';
+            const branch = '${{ github.ref_name }}';
+
+            // Generate changelog from commits since last tag
+            const { execSync } = require('child_process');
+            let changelog = '';
+            try {
+              const lastTag = '${{ steps.latest.outputs.tag }}';
+              if (lastTag !== 'v0.0.0') {
+                const commits = execSync(`git log ${lastTag}..HEAD --oneline --no-merges`).toString().trim();
+                if (commits) {
+                  changelog = `## Changes\n\n${commits.split('\n').map(l => `- ${l}`).join('\n')}`;
+                }
+              }
+            } catch (e) {
+              changelog = '';
+            }
+
+            const body = [
+              `**Branch:** \`${branch}\``,
+              `**Tag:** \`${tag}\``,
+              isPrerelease ? '**Type:** Pre-release (dev)' : '**Type:** Stable release',
+              '',
+              changelog
+            ].filter(Boolean).join('\n');
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: releaseName,
+              body: body,
+              draft: false,
+              prerelease: isPrerelease,
+              target_commitish: branch
+            });

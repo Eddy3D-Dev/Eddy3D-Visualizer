@@ -25,3 +25,11 @@
 ## 2024-05-30 - Refactor hot rendering loops to eliminate THREE.Color intermediate scratch objects
 **Learning:** While reusing "scratch" objects (like `THREE.Color()`) is typically a recommended pattern over instantiating new objects in hot paths, it is still an abstraction that introduces overhead. When doing tight loops over large datasets (100k+ points), the CPU overhead from multiple function calls (`setRGB()`, object property access) limits performance compared to working strictly with typed arrays (`Float32Array`).
 **Action:** When updating massive typed array attributes (like `colors` or `instanceColor.array`), directly look up values from flat Float32Array LUTs instead of reading and writing via an intermediate object. In this project, bypassing `THREE.Color` in `renderDataset` and `updateSensorColors` sped up color processing by ~8x. Also, always ensure `LUT_SIZE` is exported and referenced to prevent silent logic errors.
+
+## 2024-03-05 - [Array Iteration Methods Overhead]
+**Learning:** Using `Array.prototype.forEach` and `Array.prototype.filter` inside core data processing functions (`renderDataset`) introduces measurable overhead (function calls, closures, GC pressure) on large datasets (>100k points). Explicit `for` loops are consistently 2x to 4x faster for these operations.
+**Action:** Always prefer explicit `for` loops when iterating over large datasets in hot paths (like initial render parsing or updates).
+
+## 2025-02-17 - [Hot Loop Float32Array Colormap Indexing]
+**Learning:** In hot loops updating 100k+ point colors, executing \`Math.floor(Math.max(0, Math.min(1, normalized)) * maxIdx)\` is significantly slower than using bitwise OR \`| 0\` for integer truncation combined with a pre-calculated scale factor. Branch conditions (\`if (pointColors)\`) inside the loop also cause substantial overhead.
+**Action:** Extract branch conditions to the outside of hot loops (\`if (A) { loop } else { loop }\`). Pre-calculate the scale factor (\`(lutSize - 1) / valRange\`) and multiply it, then use \`(value | 0)\` to truncate to an integer for array indexing.

@@ -16,13 +16,14 @@
 <body>
   <div id="app">
     <button id="menu-toggle" class="menu-toggle" aria-label="Toggle Sidebar" aria-expanded="false" aria-controls="ui-container">
-      <span class="arrow-icon"></span>
+      <span class="arrow-icon" aria-hidden="true"></span>
     </button>
     <div id="ui-container">
       <header>
-        <div class="logo-container">
-          <img src="/LogoEddy.png" alt="Eddy3D Logo" class="main-logo">
-        </div>
+        <h1 class="logo-container">
+          <img src="/LogoEddy.png" alt="Eddy3D Visualiser" class="main-logo">
+        </h1>
+        <div id="version-badge" class="version-badge" title="Build version"></div>
       </header>
       <section id="controls">
 
@@ -41,7 +42,7 @@
           </div>
           <div class="select-container">
             <div class="download-row">
-              <button id="download-screenshots" class="download-btn" disabled title="Upload a dataset to enable downloads">
+              <button id="download-screenshots" class="download-btn" disabled title="Upload a dataset to enable downloads" aria-live="polite">
                 Download Screenshots
               </button>
               <select id="dpi-select" class="dpi-select" disabled aria-label="Screenshot DPI" title="Upload a dataset to enable downloads">
@@ -141,7 +142,7 @@
         <div class="control-group">
           <button class="collapsible-header" id="advanced-toggle" type="button" aria-expanded="false" aria-controls="advanced-content">
             <h3>Advanced</h3>
-            <span class="icon">▼</span>
+            <span class="icon" aria-hidden="true">▼</span>
           </button>
           <div class="collapsible-content" id="advanced-content" role="region" aria-label="Advanced Settings" style="display: none;">
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
@@ -163,7 +164,15 @@
       </section>
 
     </div>
-    <div id="canvas-container"></div>
+    <main id="canvas-container" aria-label="3D Visualization Canvas">
+      <div id="empty-state" class="empty-state" style="display: none;" aria-live="polite">
+        <div class="empty-state-content">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="empty-icon" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <h2>No Dataset Loaded</h2>
+          <p>Upload a CSV file/folder, or drag & drop files here to visualize the 3D simulation results.</p>
+        </div>
+      </div>
+    </main>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

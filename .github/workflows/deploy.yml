@@ -1,52 +1,86 @@
-name: Deploy static content to Pages
+name: Deploy
 
 on:
   push:
-    branches: ['main']
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
 
-# Sets the GITHUB_TOKEN permissions to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow one concurrent deployment
 concurrency:
-  group: 'pages'
+  group: 'pages-${{ github.ref_name }}'
   cancel-in-progress: true
 
 jobs:
-  # Single deploy job since we're just building
-  deploy:
+  build-and-deploy:
+    name: Build and deploy (${{ github.ref_name }})
     environment:
-      name: github-pages
+      name: ${{ github.ref_name == 'main' && 'github-pages' || 'dev-preview' }}
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version tag
+        id: version
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y%m%d)
+
+          # Find latest stable tag
+          LATEST=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+
+          if [ "$BRANCH" = "main" ]; then
+            VERSION="${LATEST}"
+          else
+            BASE="${LATEST#v}"
+            VERSION="v${BASE}-dev.${DATE}.${SHORT_SHA}"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION (branch: $BRANCH)"
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: gui/package-lock.json
+
       - name: Install dependencies
         run: npm ci
         working-directory: gui
+
       - name: Build
         run: npm run build
         working-directory: gui
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+          VITE_APP_BRANCH: ${{ steps.version.outputs.branch }}
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload dist repository
           path: './gui/dist'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
