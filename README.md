@@ -5,7 +5,7 @@ A web-based visualization tool for [Eddy3D](https://www.eddy3d.com/) simulation 
 | Deployment | Link | Status |
 | --- | --- | --- |
 | Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![prod-deploy](https://github.com/Eddy3D-Dev/Eddy3D-Visualizer/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Eddy3D-Dev/Eddy3D-Visualizer/actions/workflows/deploy.yml?query=branch%3Amain) |
-| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![dev-deploy](https://img.shields.io/badge/dev--deploy-netlify-00C7B7)](https://dev.viz.eddy3d.com/) |
+| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![dev-deploy](https://api.netlify.com/api/v1/badges/d2c336e9-4807-4de4-9228-a1094ad00dc1/deploy-status)](https://app.netlify.com/projects/dev-viz-eddy3d/deploys) |
 
 ## Features
 
