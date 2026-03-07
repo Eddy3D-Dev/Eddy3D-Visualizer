@@ -176,23 +176,16 @@ function updateFixedPointMatrices() {
 
   // ⚡ Bolt Optimization: Batch update `instanceMatrix` via direct Float32Array mutation
   // Updating instance matrices directly by writing 16-float blocks is 3-5x faster than using `Object3D.updateMatrix()`.
+  // Further optimized to only update the x and y scale components, as translations and other scales never change after creation.
   const instanceMatrixArray = fixedSensorPoints.instanceMatrix.array;
-  instanceMatrixArray.fill(0);
 
-  for (let i = 0; i < activeSensorData.length; i += 1) {
-    const point = activeSensorData[i];
+  const len = activeSensorData.length;
+  for (let i = 0; i < len; i += 1) {
     const mOff = i * 16;
 
     // Scale components (worldSize, worldSize, 1)
     instanceMatrixArray[mOff + 0] = worldSize;
     instanceMatrixArray[mOff + 5] = worldSize;
-    instanceMatrixArray[mOff + 10] = 1;
-    instanceMatrixArray[mOff + 15] = 1;
-
-    // Translation components (x, y, z)
-    instanceMatrixArray[mOff + 12] = point.x;
-    instanceMatrixArray[mOff + 13] = point.y;
-    instanceMatrixArray[mOff + 14] = point.z;
   }
 
   fixedSensorPoints.instanceMatrix.needsUpdate = true;
