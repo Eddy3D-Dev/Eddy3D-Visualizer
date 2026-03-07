@@ -28,3 +28,7 @@
 ## 2026-03-05 - Semantic Document Structure
 **Learning:** Using generic `<div>` tags for top-level visual headers (like logos) and main content areas (like a WebGL canvas container) breaks document structure for screen readers, making it harder for users to navigate the page effectively.
 **Action:** Always use semantic HTML tags. Wrap top-level logos in an `<h1>` (with appropriate `alt` text), and wrap the primary interactive content area in a `<main>` tag with an `aria-label`.
+
+## 2025-03-07 - Drag & Drop Visual Feedback
+**Learning:** Adding subtle CSS animations (like `pulse-border`) using `::after` pseudo-elements on valid drop zones prevents jarring layout shifts while providing clear, interactive feedback during drag operations. Counting dragenter/dragleave events is necessary to avoid flickering when a user hovers over child elements inside the drop zone container.
+**Action:** Always implement a reference counter for drag events in JavaScript when the drop zone has children to prevent erratic visual toggling of hover states, and use absolute positioned pseudo-elements for the drop visual instead of changing borders directly.
