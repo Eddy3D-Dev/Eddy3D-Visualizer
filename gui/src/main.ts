@@ -920,6 +920,43 @@ document.getElementById('csv-upload')?.addEventListener('change', (e) => {
   });
 });
 
+// Drag and Drop Logic
+let dragCounter = 0;
+canvasContainer.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  canvasContainer.classList.add('drag-over');
+});
+
+canvasContainer.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  canvasContainer.classList.add('drag-over');
+});
+
+canvasContainer.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    canvasContainer.classList.remove('drag-over');
+  }
+});
+
+canvasContainer.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  canvasContainer.classList.remove('drag-over');
+
+  if (e.dataTransfer && e.dataTransfer.files) {
+    handleFileUpload(e.dataTransfer.files, (text, name) => {
+      // Remove placeholder if exists
+      if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
+        csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
+      }
+      processCSVData(text, name);
+    });
+  }
+});
+
 document.getElementById('folder-upload')?.addEventListener('change', (e) => {
   handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
     if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
