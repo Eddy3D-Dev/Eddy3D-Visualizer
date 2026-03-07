@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
     paths-ignore:
       - '**.md'
   workflow_dispatch:
@@ -15,14 +14,14 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages-${{ github.ref_name }}'
+  group: 'pages-main'
   cancel-in-progress: true
 
 jobs:
   build-and-deploy:
-    name: Build and deploy (${{ github.ref_name }})
+    name: prod-deploy
     environment:
-      name: ${{ github.ref_name == 'main' && 'main-deploy' || 'dev-deploy' }}
+      name: prod-deploy
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
@@ -34,26 +33,15 @@ jobs:
       - name: Resolve version tag
         id: version
         run: |
-          BRANCH="${{ github.ref_name }}"
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          DATE=$(date -u +%Y%m%d)
-
           # Find latest stable tag
           LATEST=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
           if [ -z "$LATEST" ]; then
             LATEST="v0.0.0"
           fi
 
-          if [ "$BRANCH" = "main" ]; then
-            VERSION="${LATEST}"
-          else
-            BASE="${LATEST#v}"
-            VERSION="v${BASE}-dev.${DATE}.${SHORT_SHA}"
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION (branch: $BRANCH)"
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "branch=main" >> $GITHUB_OUTPUT
+          echo "Version: $LATEST (branch: main)"
 
       - name: Set up Node
         uses: actions/setup-node@v4

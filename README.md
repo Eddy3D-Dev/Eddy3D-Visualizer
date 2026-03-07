@@ -4,8 +4,8 @@ A web-based visualization tool for [Eddy3D](https://www.eddy3d.com/) simulation 
 
 | Deployment | Link | Status |
 | --- | --- | --- |
-| Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![Main Status](https://img.shields.io/badge/main-passing-brightgreen)](https://viz.eddy3d.com/) |
-| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![Dev Status](https://img.shields.io/badge/dev-passing-brightgreen)](https://dev.viz.eddy3d.com/) |
+| Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![prod-deploy](https://github.com/Eddy3D-Dev/Eddy3D-Visualizer/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/Eddy3D-Dev/Eddy3D-Visualizer/actions/workflows/deploy.yml?query=branch%3Amain) |
+| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![dev-deploy](https://img.shields.io/badge/dev--deploy-netlify-00C7B7)](https://dev.viz.eddy3d.com/) |
 
 ## Features
 
@@ -59,7 +59,8 @@ Output is written to `gui/dist`.
 <details>
 <summary>Deployment details</summary>
 
-- **Netlify** builds both branches automatically using the config in `netlify.toml`.
+- **GitHub Pages** deploys `main` via `.github/workflows/deploy.yml`.
+- **Netlify** deploys `dev` using the `dev` context in `netlify.toml`.
 - **GitHub Actions** handles versioning (`.github/workflows/version.yml`) and branch syncing (`.github/workflows/sync-branches.yml`).
 - Version is injected at build time via `VITE_APP_VERSION` and `VITE_APP_BRANCH` environment variables.
 
