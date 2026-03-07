@@ -2,10 +2,10 @@
 
 A web-based visualization tool for [Eddy3D](https://www.eddy3d.com/) simulation results. Upload CSV data and explore 3D airflow and environmental patterns interactively.
 
-| Environment | URL |
-| --- | --- |
-| Production | [viz.eddy3d.com](https://viz.eddy3d.com/) |
-| Development | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) |
+| Deployment | Link | Status |
+| --- | --- | --- |
+| Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![Main Status](https://img.shields.io/badge/main-passing-brightgreen)](https://viz.eddy3d.com/) |
+| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![Dev Status](https://img.shields.io/badge/dev-passing-brightgreen)](https://dev.viz.eddy3d.com/) |
 
 ## Features
 
