@@ -1,66 +1,66 @@
 # Eddy3D Visualizer
 
-| Deployment | Link | Status |
-| --- | --- | --- |
-| Main | [viz.eddy3d.com](https://viz.eddy3d.com/) | [![Main Status](https://img.shields.io/badge/main-passing-brightgreen)](https://viz.eddy3d.com/) |
-| Dev | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) | [![Dev Status](https://img.shields.io/badge/dev-passing-brightgreen)](https://dev.viz.eddy3d.com/) |
+A web-based visualization tool for [Eddy3D](https://www.eddy3d.com/) simulation results. Upload CSV data and explore 3D airflow and environmental patterns interactively.
 
-A web-based visualization tool for Eddy3D simulation results. This application allows users to upload CSV data and visualize 3D airflow/environmental patterns in interactively.
+| Environment | URL |
+| --- | --- |
+| Production | [viz.eddy3d.com](https://viz.eddy3d.com/) |
+| Development | [dev.viz.eddy3d.com](https://dev.viz.eddy3d.com/) |
 
 ## Features
 
-- **Data Import**: Upload `.csv` result files directly from the UI.
-- **Interactive 3D View**:
-  - **Perspective & Top Views**: Switch between perspective and orthographic top-down views.
-  - **Auto-Rotation**: Automatically rotate the model for presentations.
-  - **Grid & Geometry Controls**: Toggle visibility of the reference grid, building geometry, and edge outlines.
-- **Visualization Settings**:
-  - **Point Size Control**: Adjust the size of data points for better visibility.
-  - **Colormaps**: Choose from scientific colormaps including **Turbo**, **Jet** (default), **Viridis**, **Inferno**, and **Magma**.
+- **CSV Import** — drag-and-drop or upload `.csv` result files
+- **Interactive 3D** — orbit, pan, zoom; switch between perspective and top-down views
+- **Colormaps** — Turbo, Jet, Viridis, Inferno, Magma with adjustable min/max range
+- **Display Controls** — toggle buildings, edges, grid; adjust point size or use gapless mode
+- **Screenshot Export** — batch-download views at configurable DPI (100–1200 px)
+- **Auto-Rotate** — spin the model hands-free for presentations
+
+## Branching & Versioning
+
+| Branch | Purpose | Versioning | Deploy target |
+| --- | --- | --- | --- |
+| `dev` (default) | Active development | Pre-release — `vX.Y.Z-dev.DATE.SHA` | dev.viz.eddy3d.com |
+| `main` | Stable releases | Release — `vX.Y.Z` | viz.eddy3d.com |
+
+Pushes to either branch automatically sync the other via GitHub Actions and create a GitHub Release (pre-release for `dev`, stable for `main`). The deployed app displays the current version in the sidebar.
 
 <details>
-<summary>Getting Started</summary>
+<summary>Local development</summary>
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (`>=20.19.0` or `>=22.12.0`; Node 22 LTS recommended)
+- [Node.js](https://nodejs.org/) `>=20.19.0` or `>=22.12.0` (Node 22 LTS recommended)
 
-### Local Development
+### Setup
 
-1.  Navigate to the `gui` directory:
-    ```bash
-    cd gui
-    ```
+```bash
+cd gui
+npm install
+npm run dev
+```
 
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
+Open the URL shown in the terminal (usually `http://localhost:5173/`).
 
-3.  Start the development server:
-    ```bash
-    npm run dev
-    ```
-
-4.  Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173/`).
 </details>
 
-## Building for Production
-
-To create a production build:
+<details>
+<summary>Production build</summary>
 
 ```bash
 cd gui
 npm run build
 ```
 
-The output will be in `gui/dist`.
+Output is written to `gui/dist`.
 
-## Deployment
+</details>
 
-This repository is configured to automatically deploy to **GitHub Pages**.
+<details>
+<summary>Deployment details</summary>
 
--   The configuration file can be found at `gui/vite.config.ts`.
--   The GitHub Actions workflow is located at `.github/workflows/deploy.yml`.
+- **Netlify** builds both branches automatically using the config in `netlify.toml`.
+- **GitHub Actions** handles versioning (`.github/workflows/version.yml`) and branch syncing (`.github/workflows/sync-branches.yml`).
+- Version is injected at build time via `VITE_APP_VERSION` and `VITE_APP_BRANCH` environment variables.
 
-When changes are pushed to the `main` branch, the site is rebuilt and deployed to the `gh-pages` branch.
+</details>

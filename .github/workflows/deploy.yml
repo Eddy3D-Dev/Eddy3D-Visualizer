@@ -22,7 +22,7 @@ jobs:
   build-and-deploy:
     name: Build and deploy (${{ github.ref_name }})
     environment:
-      name: ${{ github.ref_name == 'main' && 'github-pages' || 'dev-preview' }}
+      name: ${{ github.ref_name == 'main' && 'main-deploy' || 'dev-deploy' }}
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
