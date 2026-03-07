@@ -1,4 +1,16 @@
 [build]
-base = "gui"
-command = "npm run build"
-publish = "dist"
+  base    = "gui"
+  command = "npm run build"
+  publish = "dist"
+
+# Production (main branch) → viz.eddy3d.com
+[context.production]
+  command = "VITE_APP_BRANCH=main VITE_APP_VERSION=$(git tag --list 'v[0-9]*' | grep -v -- '-' | sort -V | tail -1 | grep . || echo v0.0.0) npm run build"
+
+# dev branch → dev.viz.eddy3d.com
+[context.dev]
+  command = "VITE_APP_BRANCH=dev VITE_APP_VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || echo v0.0.0-dev) npm run build"
+
+# All other branch deploys
+[context.branch-deploy]
+  command = "VITE_APP_BRANCH=$BRANCH VITE_APP_VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || echo v0.0.0-dev) npm run build"
