@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import './style.css';
+
+// Display version badge
+const versionBadge = document.getElementById('version-badge');
+if (versionBadge) {
+  const version = (import.meta.env.VITE_APP_VERSION as string) || '';
+  const branch = (import.meta.env.VITE_APP_BRANCH as string) || '';
+  if (version) {
+    const isDev = branch === 'dev' || version.includes('-dev');
+    const labelClass = isDev ? 'label-dev' : 'label-main';
+    const branchLabel = isDev ? 'dev' : 'main';
+    versionBadge.innerHTML = `<span class="version-label ${labelClass}">${version} · ${branchLabel}</span>`;
+  }
+}
 import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';

@@ -55,6 +55,43 @@ header {
   display: block;
 }
 
+.version-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-align: center;
+  width: 100%;
+  letter-spacing: 0.02em;
+}
+
+.version-badge:empty {
+  display: none;
+}
+
+.version-badge .version-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+.version-badge .version-label.label-dev {
+  color: #7c3aed;
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+}
+
+.version-badge .version-label.label-main {
+  color: #059669;
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
 h1 {
   font-family: var(--font-mono);
   font-weight: 700;
