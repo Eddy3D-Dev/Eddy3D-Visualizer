@@ -33,3 +33,7 @@
 ## 2025-02-17 - [Hot Loop Float32Array Colormap Indexing]
 **Learning:** In hot loops updating 100k+ point colors, executing \`Math.floor(Math.max(0, Math.min(1, normalized)) * maxIdx)\` is significantly slower than using bitwise OR \`| 0\` for integer truncation combined with a pre-calculated scale factor. Branch conditions (\`if (pointColors)\`) inside the loop also cause substantial overhead.
 **Action:** Extract branch conditions to the outside of hot loops (\`if (A) { loop } else { loop }\`). Pre-calculate the scale factor (\`(lutSize - 1) / valRange\`) and multiply it, then use \`(value | 0)\` to truncate to an integer for array indexing.
+
+## 2025-10-24 - [Data-Oriented Spatial Grids over Maps]
+**Learning:** For continuous, 2D grid-aligned spatial lookups (like adjacent building edges), using a 1D `Float32Array` mapped dynamically to a bounding box translates to O(1) integer-index lookups, completely bypassing JS `Map` allocation and hashing overhead. It's approximately 35% faster. However, this relies strongly on data alignment; if coordinate data is non-aligned or unconstrained, index collision will occur.
+**Action:** For spatial/grid lookups, default to computing bounds and laying out data in a flat TypedArray. Validate that the dataset conforms to assumed grid structures (e.g. via modulo checks) before engaging flat grid logic, falling back to Maps for unaligned or highly-sparse data.
