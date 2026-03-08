@@ -170,6 +170,16 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="empty-icon" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           <h2>No Dataset Loaded</h2>
           <p>Upload a CSV file/folder, or drag & drop files here to visualize the 3D simulation results.</p>
+          <div class="empty-state-actions">
+            <label for="empty-csv-upload" class="custom-file-upload" title="Upload individual CSV files">
+              Upload Files
+              <input type="file" id="empty-csv-upload" accept=".csv" multiple class="sr-only">
+            </label>
+            <label for="empty-folder-upload" class="custom-file-upload" title="Upload a folder of CSV files">
+              Upload Folder
+              <input type="file" id="empty-folder-upload" webkitdirectory directory multiple class="sr-only">
+            </label>
+          </div>
         </div>
       </div>
     </main>

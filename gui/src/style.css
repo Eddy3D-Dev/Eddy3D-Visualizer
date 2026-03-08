@@ -433,6 +433,18 @@ input:checked+.slider:before {
   line-height: 1.5;
 }
 
+.empty-state-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  width: 100%;
+  pointer-events: auto; /* Re-enable clicks inside empty state */
+}
+
+.empty-state-actions .custom-file-upload {
+  flex: 1;
+}
+
 .empty-icon {
   color: var(--text-secondary);
   opacity: 0.7;

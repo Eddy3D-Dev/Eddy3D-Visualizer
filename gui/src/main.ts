@@ -915,15 +915,24 @@ document.getElementById('top-view')?.addEventListener('change', (e) => {
   persistViewSettings();
 });
 
-// CSV Upload Listener
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
+// Shared File Upload Handler
+const handleFiles = (files: FileList | null) => {
+  handleFileUpload(files, (text, name) => {
     // Remove placeholder if exists
     if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
       csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
   });
+};
+
+// CSV Upload Listener
+document.getElementById('csv-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('empty-csv-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
 });
 
 // Drag and Drop Logic
@@ -953,23 +962,16 @@ canvasContainer.addEventListener('drop', (e) => {
   canvasContainer.classList.remove('drag-over');
 
   if (e.dataTransfer && e.dataTransfer.files) {
-    handleFileUpload(e.dataTransfer.files, (text, name) => {
-      // Remove placeholder if exists
-      if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
-        csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
-      }
-      processCSVData(text, name);
-    });
+    handleFiles(e.dataTransfer.files);
   }
 });
 
 document.getElementById('folder-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
-    if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
-      csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
-    }
-    processCSVData(text, name);
-  });
+  handleFiles((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('empty-folder-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
 });
 
 // Resize handle
