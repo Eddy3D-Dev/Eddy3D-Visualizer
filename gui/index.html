@@ -15,6 +15,7 @@
 
 <body>
   <div id="app">
+    <a href="#canvas-container" class="skip-to-content">Skip to 3D Canvas</a>
     <button id="menu-toggle" class="menu-toggle" aria-label="Toggle Sidebar" aria-expanded="false" aria-controls="ui-container">
       <span class="arrow-icon" aria-hidden="true"></span>
     </button>
@@ -164,7 +165,7 @@
       </section>
 
     </div>
-    <main id="canvas-container" aria-label="3D Visualization Canvas">
+    <main id="canvas-container" aria-label="3D Visualization Canvas" tabindex="-1">
       <div id="empty-state" class="empty-state" style="display: none;" aria-live="polite">
         <div class="empty-state-content">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="empty-icon" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
