@@ -35,3 +35,7 @@
 ## 2026-03-08 - Added Upload Actions to Empty State
 **Learning:** When displaying an empty state overlay over a functional drag-and-drop zone, the overlay itself often has `pointer-events: none` to allow drop events to pass through to the canvas underneath.
 **Action:** When adding clickable Call-to-Action (CTA) buttons inside such an empty state, explicitly apply `pointer-events: auto` to the buttons or their container so users can interact with them.
+
+## 2026-03-09 - Keyboard Navigation and Skip Links
+**Learning:** Adding a "skip to content" link allows keyboard users to bypass long navigation menus, but the target container (like `<main>`) must have `tabindex="-1"` to be programmatically focusable. Without this, the focus sequence breaks and the user must still tab through the entire sidebar. Additionally, applying `outline: none` to the target container when focused prevents an ugly visual focus ring on a structural element, ensuring a smooth experience.
+**Action:** Always include a `tabindex="-1"` and `outline: none` on the target element of a "skip to content" link to ensure proper keyboard tab sequence flow without degrading visual aesthetics.
