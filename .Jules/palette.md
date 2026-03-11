@@ -39,3 +39,7 @@
 ## 2026-03-09 - Keyboard Navigation and Skip Links
 **Learning:** Adding a "skip to content" link allows keyboard users to bypass long navigation menus, but the target container (like `<main>`) must have `tabindex="-1"` to be programmatically focusable. Without this, the focus sequence breaks and the user must still tab through the entire sidebar. Additionally, applying `outline: none` to the target container when focused prevents an ugly visual focus ring on a structural element, ensuring a smooth experience.
 **Action:** Always include a `tabindex="-1"` and `outline: none` on the target element of a "skip to content" link to ensure proper keyboard tab sequence flow without degrading visual aesthetics.
+
+## 2026-03-09 - ARIA Switch Role for Custom Toggles
+**Learning:** When styling native checkboxes `<input type="checkbox">` as sliding toggles (e.g., using a `.switch` wrapper and visually hiding the input), screen readers default to announcing them as standard checkboxes. This mismatch between visual presentation (a switch) and semantic meaning (a checkbox) can be confusing.
+**Action:** Always add `role="switch"` to visually hidden checkbox inputs that function as toggles. This ensures assistive technologies correctly announce the component and its on/off state, matching the user's visual expectations.
