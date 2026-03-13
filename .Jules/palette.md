@@ -47,3 +47,7 @@
 ## 2026-03-11 - Explicit Disabled States for Custom Form Controls
 **Learning:** When adding custom styling (like `cursor: pointer` or custom backgrounds) to form controls such as `<select>`, the browser's default disabled visual cues are often overridden. This leaves elements looking active and clickable even when they possess the `disabled` attribute, frustrating users.
 **Action:** Always provide an explicit `:disabled` CSS rule (e.g., `cursor: not-allowed; opacity: 0.7; background-color: var(--secondary-bg);`) for any form control that receives custom styling to restore clear visual feedback of its inactive state.
+
+## 2026-03-12 - Consistent Interactive Cursors
+**Learning:** Some custom UI form elements like `<select>` and `<input type="range">` lacked a default interactive `cursor: pointer` state when enabled, but gained a visible `cursor: not-allowed` when disabled. This created inconsistent visual cues for interactivity across the application where other custom elements (like buttons and toggles) always had pointer cues.
+**Action:** Ensure all custom styled interactive form elements explicitly include `cursor: pointer` when enabled so they match standard interactive button behaviors and contrast clearly with their `disabled` states.
