@@ -51,3 +51,7 @@
 ## 2026-03-12 - Consistent Interactive Cursors
 **Learning:** Some custom UI form elements like `<select>` and `<input type="range">` lacked a default interactive `cursor: pointer` state when enabled, but gained a visible `cursor: not-allowed` when disabled. This created inconsistent visual cues for interactivity across the application where other custom elements (like buttons and toggles) always had pointer cues.
 **Action:** Ensure all custom styled interactive form elements explicitly include `cursor: pointer` when enabled so they match standard interactive button behaviors and contrast clearly with their `disabled` states.
+
+## 2024-03-14 - Domain-Specific Toggles Tooltips
+**Learning:** Providing explicit tooltips (via `title` attributes) for domain-specific technical toggles (like "Gapless Points" or "Billboarding") significantly improves the discoverability and usability of advanced features for new users without cluttering the clean UI. Placing the tooltip on the parent container (e.g., `.toggle-item`) rather than just the input ensures the hint is visible when hovering anywhere near the control.
+**Action:** When implementing new configuration options that use specialized terminology, always include an informative `title` attribute on the wrapper element to explain the effect.

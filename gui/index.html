@@ -16,7 +16,7 @@
 <body>
   <div id="app">
     <a href="#canvas-container" class="skip-to-content">Skip to 3D Canvas</a>
-    <button id="menu-toggle" class="menu-toggle" aria-label="Toggle Sidebar" aria-expanded="false" aria-controls="ui-container">
+    <button id="menu-toggle" class="menu-toggle" aria-label="Toggle Sidebar" title="Toggle Sidebar" aria-expanded="false" aria-controls="ui-container">
       <span class="arrow-icon" aria-hidden="true"></span>
     </button>
     <div id="ui-container">
@@ -65,49 +65,49 @@
 
         <div class="control-group">
           <h3>View Settings</h3>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Switch to a top-down orthographic camera view">
             <label for="top-view" class="toggle-label">Top View</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="top-view" aria-label="Top View">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Automatically rotate the 3D scene">
             <label for="auto-rotate" class="toggle-label">Auto-rotate</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="auto-rotate" aria-label="Auto-rotate">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Toggle between perspective and 2D orthographic camera">
             <label for="perspective-mode" class="toggle-label">Perspective Mode</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="perspective-mode" aria-label="Perspective Mode">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Show or hide the ground reference grid">
             <label for="grid" class="toggle-label">Grid</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="grid" aria-label="Grid">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Show or hide the 3D building context models">
             <label for="show-buildings" class="toggle-label">Show Buildings</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="show-buildings" checked aria-label="Show Buildings">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Show or hide the outlines of the building models">
             <label for="show-edges" class="toggle-label">Show Edges</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="show-edges" checked aria-label="Show Edges">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Render points as a continuous surface without gaps between them">
             <label for="gapless-points" class="toggle-label">Gapless Points</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="gapless-points" checked aria-label="Gapless Points">
@@ -121,14 +121,14 @@
             </div>
             <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" disabled aria-label="Point Size" title="Disable 'Gapless Points' to adjust manually">
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Make individual points always face the camera (billboarding)">
             <label for="rotate-to-camera" class="toggle-label">Rotate To Camera</label>
             <label class="switch">
               <input type="checkbox" role="switch" id="rotate-to-camera" aria-label="Rotate To Camera">
               <span class="slider"></span>
             </label>
           </div>
-          <div class="toggle-item">
+          <div class="toggle-item" title="Select the color mapping for the values">
             <label for="colormap-select">Colormap</label>
             <select id="colormap-select" aria-label="Colormap Selection" class="colormap-select">
               <option value="turbo">Turbo</option>
@@ -141,19 +141,19 @@
         </div>
 
         <div class="control-group">
-          <button class="collapsible-header" id="advanced-toggle" type="button" aria-expanded="false" aria-controls="advanced-content">
+          <button class="collapsible-header" id="advanced-toggle" type="button" aria-expanded="false" aria-controls="advanced-content" title="Show advanced settings">
             <h3>Advanced</h3>
             <span class="icon" aria-hidden="true">▼</span>
           </button>
           <div class="collapsible-content" id="advanced-content" role="region" aria-label="Advanced Settings" style="display: none;">
-            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
+            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the minimum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-min">Min Value</label>
                 <span id="min-val-display" style="font-size: 0.8em; color: var(--text-secondary);">0</span>
               </div>
               <input type="range" id="colormap-min" class="range-input" aria-label="Colormap Minimum Value">
             </div>
-            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;">
+            <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the maximum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-max">Max Value</label>
                 <span id="max-val-display" style="font-size: 0.8em; color: var(--text-secondary);">1</span>
