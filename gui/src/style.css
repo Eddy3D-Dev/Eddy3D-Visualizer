@@ -376,6 +376,10 @@ h1 {
   border-radius: 24px;
 }
 
+.switch:hover .slider {
+  background-color: #cbd5e1;
+}
+
 .slider:before {
   position: absolute;
   content: "";
@@ -391,6 +395,10 @@ h1 {
 
 input:checked+.slider {
   background-color: #000000;
+}
+
+.switch:hover input:checked+.slider {
+  background-color: #334155;
 }
 
 input:checked+.slider:before {
