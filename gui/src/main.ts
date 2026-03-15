@@ -1066,6 +1066,8 @@ document.getElementById('advanced-toggle')?.addEventListener('click', function (
     content.style.display = isHidden ? 'block' : 'none';
     this.classList.toggle('active', isHidden);
     this.setAttribute('aria-expanded', String(isHidden));
+    this.setAttribute('title', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
+    this.setAttribute('aria-label', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
   }
 });
 
@@ -1076,7 +1078,10 @@ const uiContainer = document.getElementById('ui-container');
 menuToggle?.addEventListener('click', () => {
   menuToggle.classList.toggle('open');
   const isOpen = uiContainer?.classList.toggle('sidebar-open');
+  const label = isOpen ? 'Close Sidebar' : 'Open Sidebar';
   menuToggle.setAttribute('aria-expanded', String(isOpen));
+  menuToggle.setAttribute('title', label);
+  menuToggle.setAttribute('aria-label', label);
 });
 
 applyPersistedViewSettings();
@@ -1087,6 +1092,8 @@ canvasContainer.addEventListener('click', () => {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
+    menuToggle?.setAttribute('title', 'Open Sidebar');
+    menuToggle?.setAttribute('aria-label', 'Open Sidebar');
   }
 });
 

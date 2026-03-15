@@ -55,3 +55,7 @@
 ## 2024-03-14 - Domain-Specific Toggles Tooltips
 **Learning:** Providing explicit tooltips (via `title` attributes) for domain-specific technical toggles (like "Gapless Points" or "Billboarding") significantly improves the discoverability and usability of advanced features for new users without cluttering the clean UI. Placing the tooltip on the parent container (e.g., `.toggle-item`) rather than just the input ensures the hint is visible when hovering anywhere near the control.
 **Action:** When implementing new configuration options that use specialized terminology, always include an informative `title` attribute on the wrapper element to explain the effect.
+
+## 2025-02-17 - Dynamic ARIA and Tooltips for Toggles
+**Learning:** For collapsible menus and toggles, just updating `aria-expanded` is often insufficient for clarity. Users (both sighted via tooltips and visually impaired via screen readers) benefit significantly when the `aria-label` and `title` attributes dynamically update to reflect the *next* actionable state (e.g., changing from "Open Sidebar" to "Close Sidebar").
+**Action:** When implementing or fixing toggle controls for menus/panels, always update `title` and `aria-label` dynamically via JavaScript alongside `aria-expanded` to clearly communicate the action the toggle will perform.
