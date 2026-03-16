@@ -937,18 +937,18 @@ document.getElementById('empty-csv-upload')?.addEventListener('change', (e) => {
 
 // Drag and Drop Logic
 let dragCounter = 0;
-canvasContainer.addEventListener('dragover', (e) => {
+window.addEventListener('dragover', (e) => {
   e.preventDefault();
   canvasContainer.classList.add('drag-over');
 });
 
-canvasContainer.addEventListener('dragenter', (e) => {
+window.addEventListener('dragenter', (e) => {
   e.preventDefault();
   dragCounter++;
   canvasContainer.classList.add('drag-over');
 });
 
-canvasContainer.addEventListener('dragleave', (e) => {
+window.addEventListener('dragleave', (e) => {
   e.preventDefault();
   dragCounter--;
   if (dragCounter === 0) {
@@ -956,7 +956,7 @@ canvasContainer.addEventListener('dragleave', (e) => {
   }
 });
 
-canvasContainer.addEventListener('drop', (e) => {
+window.addEventListener('drop', (e) => {
   e.preventDefault();
   dragCounter = 0;
   canvasContainer.classList.remove('drag-over');
