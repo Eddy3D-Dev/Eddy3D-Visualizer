@@ -59,3 +59,7 @@
 ## 2025-02-17 - Dynamic ARIA and Tooltips for Toggles
 **Learning:** For collapsible menus and toggles, just updating `aria-expanded` is often insufficient for clarity. Users (both sighted via tooltips and visually impaired via screen readers) benefit significantly when the `aria-label` and `title` attributes dynamically update to reflect the *next* actionable state (e.g., changing from "Open Sidebar" to "Close Sidebar").
 **Action:** When implementing or fixing toggle controls for menus/panels, always update `title` and `aria-label` dynamically via JavaScript alongside `aria-expanded` to clearly communicate the action the toggle will perform.
+
+## 2026-03-15 - Global Drag & Drop Zones
+**Learning:** Attaching drag-and-drop listeners solely to a specific container (like a canvas) creates a fragile UX. If a user accidentally drops a file just outside the target area (e.g., on a sidebar or margin), the browser will default to opening the file directly, navigating away from the application and destroying their current session state.
+**Action:** Always attach drag-and-drop event listeners to the `window` or `document` level to intercept all drops across the entire viewport, while still providing visual feedback (like highlighting) on the specific target area.
