@@ -63,3 +63,7 @@
 ## 2026-03-15 - Global Drag & Drop Zones
 **Learning:** Attaching drag-and-drop listeners solely to a specific container (like a canvas) creates a fragile UX. If a user accidentally drops a file just outside the target area (e.g., on a sidebar or margin), the browser will default to opening the file directly, navigating away from the application and destroying their current session state.
 **Action:** Always attach drag-and-drop event listeners to the `window` or `document` level to intercept all drops across the entire viewport, while still providing visual feedback (like highlighting) on the specific target area.
+
+## 2026-03-17 - Actionable Primary Buttons Needs Contrast and Tactile Feedback
+**Learning:** The "Download Screenshots" button used a light blue color (`#25b6eb`) that failed color contrast ratio against white text. Additionally, major primary action buttons (like file upload and downloads) lacked an `:active` CSS state, providing no visual tactile feedback when a user clicks on them.
+**Action:** Use a darker accessible color like `#2563eb` for buttons with white text, and always add a subtle `:active { transform: scale(0.98); }` to primary interaction elements.

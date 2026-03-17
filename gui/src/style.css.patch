@@ -1,0 +1,47 @@
+--- gui/src/style.css
++++ gui/src/style.css
+@@ -102,6 +102,10 @@
+   outline-offset: 2px;
+ }
+
++.custom-file-upload:active {
++  transform: scale(0.98);
++}
++
+ /* Download Button */
+ .download-btn {
+-  background-color: #25b6eb;
++  background-color: #2563eb;
+   color: white;
+   padding: 10px 16px;
+@@ -112,7 +116,7 @@
+   box-sizing: border-box;
+   text-align: center;
+   border: none;
+-  transition: background-color 0.2s, opacity 0.2s;
++  transition: background-color 0.2s, opacity 0.2s, transform 0.1s;
+ }
+
+@@ -127,6 +131,10 @@
+   opacity: 0.7;
+ }
+
++.download-btn:active:not(:disabled) {
++  transform: scale(0.98);
++}
++
+ .download-btn.loading {
+   position: relative;
+@@ -218,11 +226,11 @@
+   right: 0;
+   bottom: 0;
+-  background-color: #e2e8f0;
++  background-color: #64748b;
+   transition: .3s;
+   border-radius: 24px;
+ }
+
+ .switch:hover .slider {
+-  background-color: #cbd5e1;
++  background-color: #475569;
+ }
