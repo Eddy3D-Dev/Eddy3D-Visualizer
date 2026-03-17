@@ -32,3 +32,38 @@
 ## 2025-03-07 - Drag & Drop Visual Feedback
 **Learning:** Adding subtle CSS animations (like `pulse-border`) using `::after` pseudo-elements on valid drop zones prevents jarring layout shifts while providing clear, interactive feedback during drag operations. Counting dragenter/dragleave events is necessary to avoid flickering when a user hovers over child elements inside the drop zone container.
 **Action:** Always implement a reference counter for drag events in JavaScript when the drop zone has children to prevent erratic visual toggling of hover states, and use absolute positioned pseudo-elements for the drop visual instead of changing borders directly.
+## 2026-03-08 - Added Upload Actions to Empty State
+**Learning:** When displaying an empty state overlay over a functional drag-and-drop zone, the overlay itself often has `pointer-events: none` to allow drop events to pass through to the canvas underneath.
+**Action:** When adding clickable Call-to-Action (CTA) buttons inside such an empty state, explicitly apply `pointer-events: auto` to the buttons or their container so users can interact with them.
+
+## 2026-03-09 - Keyboard Navigation and Skip Links
+**Learning:** Adding a "skip to content" link allows keyboard users to bypass long navigation menus, but the target container (like `<main>`) must have `tabindex="-1"` to be programmatically focusable. Without this, the focus sequence breaks and the user must still tab through the entire sidebar. Additionally, applying `outline: none` to the target container when focused prevents an ugly visual focus ring on a structural element, ensuring a smooth experience.
+**Action:** Always include a `tabindex="-1"` and `outline: none` on the target element of a "skip to content" link to ensure proper keyboard tab sequence flow without degrading visual aesthetics.
+
+## 2026-03-09 - ARIA Switch Role for Custom Toggles
+**Learning:** When styling native checkboxes `<input type="checkbox">` as sliding toggles (e.g., using a `.switch` wrapper and visually hiding the input), screen readers default to announcing them as standard checkboxes. This mismatch between visual presentation (a switch) and semantic meaning (a checkbox) can be confusing.
+**Action:** Always add `role="switch"` to visually hidden checkbox inputs that function as toggles. This ensures assistive technologies correctly announce the component and its on/off state, matching the user's visual expectations.
+
+## 2026-03-11 - Explicit Disabled States for Custom Form Controls
+**Learning:** When adding custom styling (like `cursor: pointer` or custom backgrounds) to form controls such as `<select>`, the browser's default disabled visual cues are often overridden. This leaves elements looking active and clickable even when they possess the `disabled` attribute, frustrating users.
+**Action:** Always provide an explicit `:disabled` CSS rule (e.g., `cursor: not-allowed; opacity: 0.7; background-color: var(--secondary-bg);`) for any form control that receives custom styling to restore clear visual feedback of its inactive state.
+
+## 2026-03-12 - Consistent Interactive Cursors
+**Learning:** Some custom UI form elements like `<select>` and `<input type="range">` lacked a default interactive `cursor: pointer` state when enabled, but gained a visible `cursor: not-allowed` when disabled. This created inconsistent visual cues for interactivity across the application where other custom elements (like buttons and toggles) always had pointer cues.
+**Action:** Ensure all custom styled interactive form elements explicitly include `cursor: pointer` when enabled so they match standard interactive button behaviors and contrast clearly with their `disabled` states.
+
+## 2024-03-14 - Domain-Specific Toggles Tooltips
+**Learning:** Providing explicit tooltips (via `title` attributes) for domain-specific technical toggles (like "Gapless Points" or "Billboarding") significantly improves the discoverability and usability of advanced features for new users without cluttering the clean UI. Placing the tooltip on the parent container (e.g., `.toggle-item`) rather than just the input ensures the hint is visible when hovering anywhere near the control.
+**Action:** When implementing new configuration options that use specialized terminology, always include an informative `title` attribute on the wrapper element to explain the effect.
+
+## 2025-02-17 - Dynamic ARIA and Tooltips for Toggles
+**Learning:** For collapsible menus and toggles, just updating `aria-expanded` is often insufficient for clarity. Users (both sighted via tooltips and visually impaired via screen readers) benefit significantly when the `aria-label` and `title` attributes dynamically update to reflect the *next* actionable state (e.g., changing from "Open Sidebar" to "Close Sidebar").
+**Action:** When implementing or fixing toggle controls for menus/panels, always update `title` and `aria-label` dynamically via JavaScript alongside `aria-expanded` to clearly communicate the action the toggle will perform.
+
+## 2026-03-15 - Global Drag & Drop Zones
+**Learning:** Attaching drag-and-drop listeners solely to a specific container (like a canvas) creates a fragile UX. If a user accidentally drops a file just outside the target area (e.g., on a sidebar or margin), the browser will default to opening the file directly, navigating away from the application and destroying their current session state.
+**Action:** Always attach drag-and-drop event listeners to the `window` or `document` level to intercept all drops across the entire viewport, while still providing visual feedback (like highlighting) on the specific target area.
+
+## 2026-03-17 - Actionable Primary Buttons Needs Contrast and Tactile Feedback
+**Learning:** The "Download Screenshots" button used a light blue color (`#25b6eb`) that failed color contrast ratio against white text. Additionally, major primary action buttons (like file upload and downloads) lacked an `:active` CSS state, providing no visual tactile feedback when a user clicks on them.
+**Action:** Use a darker accessible color like `#2563eb` for buttons with white text, and always add a subtle `:active { transform: scale(0.98); }` to primary interaction elements.

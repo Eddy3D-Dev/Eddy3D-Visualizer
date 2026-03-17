@@ -915,31 +915,40 @@ document.getElementById('top-view')?.addEventListener('change', (e) => {
   persistViewSettings();
 });
 
-// CSV Upload Listener
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
+// Shared File Upload Handler
+const handleFiles = (files: FileList | null) => {
+  handleFileUpload(files, (text, name) => {
     // Remove placeholder if exists
     if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
       csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
   });
+};
+
+// CSV Upload Listener
+document.getElementById('csv-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('empty-csv-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
 });
 
 // Drag and Drop Logic
 let dragCounter = 0;
-canvasContainer.addEventListener('dragover', (e) => {
+window.addEventListener('dragover', (e) => {
   e.preventDefault();
   canvasContainer.classList.add('drag-over');
 });
 
-canvasContainer.addEventListener('dragenter', (e) => {
+window.addEventListener('dragenter', (e) => {
   e.preventDefault();
   dragCounter++;
   canvasContainer.classList.add('drag-over');
 });
 
-canvasContainer.addEventListener('dragleave', (e) => {
+window.addEventListener('dragleave', (e) => {
   e.preventDefault();
   dragCounter--;
   if (dragCounter === 0) {
@@ -947,29 +956,22 @@ canvasContainer.addEventListener('dragleave', (e) => {
   }
 });
 
-canvasContainer.addEventListener('drop', (e) => {
+window.addEventListener('drop', (e) => {
   e.preventDefault();
   dragCounter = 0;
   canvasContainer.classList.remove('drag-over');
 
   if (e.dataTransfer && e.dataTransfer.files) {
-    handleFileUpload(e.dataTransfer.files, (text, name) => {
-      // Remove placeholder if exists
-      if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
-        csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
-      }
-      processCSVData(text, name);
-    });
+    handleFiles(e.dataTransfer.files);
   }
 });
 
 document.getElementById('folder-upload')?.addEventListener('change', (e) => {
-  handleFileUpload((e.target as HTMLInputElement).files, (text, name) => {
-    if (csvLoader.hasDataset(PLACEHOLDER_FILENAME)) {
-      csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
-    }
-    processCSVData(text, name);
-  });
+  handleFiles((e.target as HTMLInputElement).files);
+});
+
+document.getElementById('empty-folder-upload')?.addEventListener('change', (e) => {
+  handleFiles((e.target as HTMLInputElement).files);
 });
 
 // Resize handle
@@ -1064,6 +1066,8 @@ document.getElementById('advanced-toggle')?.addEventListener('click', function (
     content.style.display = isHidden ? 'block' : 'none';
     this.classList.toggle('active', isHidden);
     this.setAttribute('aria-expanded', String(isHidden));
+    this.setAttribute('title', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
+    this.setAttribute('aria-label', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
   }
 });
 
@@ -1074,7 +1078,10 @@ const uiContainer = document.getElementById('ui-container');
 menuToggle?.addEventListener('click', () => {
   menuToggle.classList.toggle('open');
   const isOpen = uiContainer?.classList.toggle('sidebar-open');
+  const label = isOpen ? 'Close Sidebar' : 'Open Sidebar';
   menuToggle.setAttribute('aria-expanded', String(isOpen));
+  menuToggle.setAttribute('title', label);
+  menuToggle.setAttribute('aria-label', label);
 });
 
 applyPersistedViewSettings();
@@ -1085,6 +1092,8 @@ canvasContainer.addEventListener('click', () => {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
+    menuToggle?.setAttribute('title', 'Open Sidebar');
+    menuToggle?.setAttribute('aria-label', 'Open Sidebar');
   }
 });
 
