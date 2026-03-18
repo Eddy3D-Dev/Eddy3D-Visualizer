@@ -348,6 +348,7 @@ h1 {
 .range-input {
   width: 100%;
   cursor: pointer;
+  accent-color: var(--accent-color);
 }
 
 /* Switch Styles */
@@ -424,6 +425,24 @@ input:checked+.slider:before {
   outline: none;
 }
 
+#canvas-container.drag-over::before {
+  content: 'Drop files to load dataset';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--primary-bg);
+  color: var(--text-primary);
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  z-index: 101;
+  pointer-events: none;
+}
+
 #canvas-container.drag-over::after {
   content: '';
   position: absolute;
@@ -448,6 +467,11 @@ input:checked+.slider:before {
     border-color: var(--text-primary);
     background-color: rgba(255, 255, 255, 0.6);
   }
+}
+
+#canvas-container.drag-over .empty-state {
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .empty-state {
