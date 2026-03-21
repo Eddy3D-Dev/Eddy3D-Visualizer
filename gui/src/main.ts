@@ -1086,14 +1086,24 @@ menuToggle?.addEventListener('click', () => {
 
 applyPersistedViewSettings();
 
-// Close sidebar when clicking outside
-canvasContainer.addEventListener('click', () => {
+const closeSidebar = (returnFocus = false) => {
   if (uiContainer?.classList.contains('sidebar-open')) {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
     menuToggle?.setAttribute('title', 'Open Sidebar');
     menuToggle?.setAttribute('aria-label', 'Open Sidebar');
+    if (returnFocus) menuToggle?.focus();
+  }
+};
+
+// Close sidebar when clicking outside
+canvasContainer.addEventListener('click', () => closeSidebar(false));
+
+// Close sidebar on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeSidebar(true);
   }
 });
 
