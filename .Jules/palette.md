@@ -72,3 +72,11 @@
 ## 2026-03-20 - Off-Canvas Menu Keyboard Accessibility
 **Learning:** When implementing custom off-canvas mobile menus (like the sidebar controlled by `#menu-toggle`), keyboard users can become trapped if there's no way to dismiss the menu without tabbing backwards. Furthermore, when the menu is dismissed, focus is often lost, forcing users to restart navigation from the top of the document.
 **Action:** Always provide an `Escape` key listener to close off-canvas menus, and crucially, return focus (`.focus()`) to the toggle button that originally opened the menu *only* when dismissed via keyboard, preserving context for screen reader and keyboard-only users.
+
+## 2026-03-22 - Dynamic Document Titles for Wayfinding
+**Learning:** In single-page applications dealing with multiple dataset or document loads, the browser tab title often remains static. This deprives users with multiple tabs open of critical wayfinding context and prevents screen readers from announcing the new primary context when data changes.
+**Action:** Always dynamically update `document.title` to reflect the currently active dataset or primary content context.
+
+## 2026-03-22 - Resetting File Input Values for Iterative Workflows
+**Learning:** When users upload a file using `<input type="file">`, process the data, modify the file locally, and try to re-upload the exact same file, the browser does not fire a `change` event because the file path hasn't changed. This breaks iterative test-and-modify workflows.
+**Action:** Always clear the `.value` property of a file input element (`input.value = ''`) immediately after its files have been handed off for processing to ensure subsequent selections of the same file trigger the necessary events.
