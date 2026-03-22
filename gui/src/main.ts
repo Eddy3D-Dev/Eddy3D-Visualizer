@@ -482,6 +482,13 @@ function renderDataset(name: string) {
 
   activeSensorData = data;
 
+  // Update document title for better wayfinding and screen reader context
+  if (name === PLACEHOLDER_FILENAME) {
+    document.title = 'Eddy3D Visualiser';
+  } else {
+    document.title = `${name} - Eddy3D Visualiser`;
+  }
+
   // Calculate Min/Max for this dataset
   let referenceData = data;
   if (name.toLowerCase().endsWith('_pred.csv')) {
@@ -926,14 +933,17 @@ const handleFiles = (files: FileList | null) => {
   });
 };
 
-// CSV Upload Listener
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+// Helper to clear input value after selection so the same file can be re-uploaded
+const handleFileInputChange = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  handleFiles(input.files);
+  input.value = ''; // Reset value to allow selecting the same file again
+};
 
-document.getElementById('empty-csv-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+// CSV Upload Listener
+document.getElementById('csv-upload')?.addEventListener('change', handleFileInputChange);
+
+document.getElementById('empty-csv-upload')?.addEventListener('change', handleFileInputChange);
 
 // Drag and Drop Logic
 let dragCounter = 0;
@@ -966,13 +976,9 @@ window.addEventListener('drop', (e) => {
   }
 });
 
-document.getElementById('folder-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('folder-upload')?.addEventListener('change', handleFileInputChange);
 
-document.getElementById('empty-folder-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('empty-folder-upload')?.addEventListener('change', handleFileInputChange);
 
 // Resize handle
 window.addEventListener('resize', () => {
