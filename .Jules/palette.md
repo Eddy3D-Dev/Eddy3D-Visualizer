@@ -80,3 +80,7 @@
 ## 2026-03-22 - Resetting File Input Values for Iterative Workflows
 **Learning:** When users upload a file using `<input type="file">`, process the data, modify the file locally, and try to re-upload the exact same file, the browser does not fire a `change` event because the file path hasn't changed. This breaks iterative test-and-modify workflows.
 **Action:** Always clear the `.value` property of a file input element (`input.value = ''`) immediately after its files have been handed off for processing to ensure subsequent selections of the same file trigger the necessary events.
+
+## 2026-03-23 - Valid Semantic Nesting for Buttons and Headings
+**Learning:** Placing a heading tag (like `<h3>`) directly inside an interactive control tag (like `<button>`) results in invalid HTML semantics. This structure creates an ambiguous and potentially confusing experience for screen reader users because headings are meant to define structural landmarks for document navigation, while buttons are distinct actionable elements.
+**Action:** Always invert the nesting when combining structural meaning with action. Wrap the interactive `<button>` *inside* the heading element (`<h3>`), using neutral elements like `<span>` inside the button for textual labels, preserving both document structure and interactivity without semantic conflict.
