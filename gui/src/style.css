@@ -550,6 +550,10 @@ input:checked+.slider:before {
 }
 
 /* Collapsible Styles */
+.collapsible-heading {
+  margin-bottom: 0;
+}
+
 .collapsible-header {
   display: flex;
   justify-content: space-between;
@@ -576,8 +580,13 @@ input:checked+.slider:before {
   border-radius: 4px;
 }
 
-.collapsible-header h3 {
-  margin-bottom: 0;
+.collapsible-header span:first-child {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 
 .collapsible-header .icon {
