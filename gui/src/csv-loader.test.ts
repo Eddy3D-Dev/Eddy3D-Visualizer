@@ -5,7 +5,8 @@ import { CSVLoader, updateResultsDropdown, handleFileUpload } from './csv-loader
 
 function makeLoader() {
   const onUpdate = vi.fn();
-  return { loader: new CSVLoader(onUpdate), onUpdate };
+  const onError = vi.fn();
+  return { loader: new CSVLoader(onUpdate, onError), onUpdate, onError };
 }
 
 const SIMPLE_CSV = `x,y,z,mag_u,bldg_height
@@ -67,17 +68,19 @@ describe('CSVLoader', () => {
 
     it('rejects CSV missing required x/y/z columns', () => {
       const csv = 'a,b,c\n1,2,3';
-      const { loader, onUpdate } = makeLoader();
+      const { loader, onUpdate, onError } = makeLoader();
       loader.processCSVData(csv, 'bad.csv');
       expect(loader.hasDataset('bad.csv')).toBe(false);
       expect(onUpdate).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('Error: The file "bad.csv" is missing required columns (x, y, z).');
     });
 
     it('handles empty CSV gracefully', () => {
-      const { loader, onUpdate } = makeLoader();
+      const { loader, onUpdate, onError } = makeLoader();
       loader.processCSVData('', 'empty.csv');
       expect(loader.hasDataset('empty.csv')).toBe(false);
       expect(onUpdate).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('Error: The file "empty.csv" is empty or invalid.');
     });
 
     it('defaults val to 0 when mag_u column is absent', () => {

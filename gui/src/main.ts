@@ -441,8 +441,31 @@ const csvLoader = new CSVLoader(
     updateResultsDropdownUI();
     updateDownloadButtonUI();
     updateEmptyStateUI();
-  }
+  },
+  (msg) => showToast(msg, true)
 );
+
+export function showToast(message: string, isError = false) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${isError ? 'toast-error' : ''}`;
+  toast.setAttribute('aria-live', 'polite');
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
 
 function updateEmptyStateUI() {
   const emptyState = document.getElementById('empty-state');
