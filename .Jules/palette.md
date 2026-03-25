@@ -84,3 +84,11 @@
 ## 2026-03-23 - Valid Semantic Nesting for Buttons and Headings
 **Learning:** Placing a heading tag (like `<h3>`) directly inside an interactive control tag (like `<button>`) results in invalid HTML semantics. This structure creates an ambiguous and potentially confusing experience for screen reader users because headings are meant to define structural landmarks for document navigation, while buttons are distinct actionable elements.
 **Action:** Always invert the nesting when combining structural meaning with action. Wrap the interactive `<button>` *inside* the heading element (`<h3>`), using neutral elements like `<span>` inside the button for textual labels, preserving both document structure and interactivity without semantic conflict.
+
+## 2026-03-24 - Focus Ring on Mouse Click for Visually Hidden Inputs
+**Learning:** When styling custom file uploads using visually hidden inputs wrapped in a `<label>`, applying `:focus-within` to the label causes an ugly focus ring to persist when a user clicks the button with a mouse. This happens because clicking the label programmatically focuses the hidden input.
+**Action:** Replace `:focus-within` with the modern `:has(input:focus-visible)` selector. This ensures the focus ring is only shown during actual keyboard navigation, maintaining accessibility while improving mouse interaction aesthetics.
+
+## 2026-03-24 - Clear Feedback for Silent File Parsing Errors
+**Learning:** Silent failures (e.g. failing to parse a CSV because it lacks required columns) leave the user staring at an empty state with no indication of what went wrong, leading to extreme frustration. Logging errors only to the console is insufficient for production UX.
+**Action:** Always provide non-intrusive, explicit feedback (like an animated error toast notification with `aria-live="polite"`) when asynchronous or background tasks like file parsing fail, explaining exactly what went wrong.

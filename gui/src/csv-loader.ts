@@ -11,11 +11,14 @@ export interface SensorDataPoint {
 export class CSVLoader {
   private loadedDatasets = new Map<string, SensorDataPoint[]>();
   private onUpdateUI: () => void;
+  private onError?: (msg: string) => void;
 
   constructor(
-    onUpdateUI: () => void
+    onUpdateUI: () => void,
+    onError?: (msg: string) => void
   ) {
     this.onUpdateUI = onUpdateUI;
+    this.onError = onError;
   }
 
   processCSVData(text: string, name: string) {
@@ -39,6 +42,7 @@ export class CSVLoader {
 
       if (headerLine.length === 0) {
         console.error('CSV is empty');
+        this.onError?.(`Error: The file "${name}" is empty or invalid.`);
         return;
       }
 
@@ -51,6 +55,7 @@ export class CSVLoader {
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
+        this.onError?.(`Error: The file "${name}" is missing required columns (x, y, z).`);
         return;
       }
 
