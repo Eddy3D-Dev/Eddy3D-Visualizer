@@ -92,3 +92,7 @@
 ## 2026-03-24 - Clear Feedback for Silent File Parsing Errors
 **Learning:** Silent failures (e.g. failing to parse a CSV because it lacks required columns) leave the user staring at an empty state with no indication of what went wrong, leading to extreme frustration. Logging errors only to the console is insufficient for production UX.
 **Action:** Always provide non-intrusive, explicit feedback (like an animated error toast notification with `aria-live="polite"`) when asynchronous or background tasks like file parsing fail, explaining exactly what went wrong.
+
+## 2026-03-25 - Explicit Cursor Feedback for Interactive Canvases
+**Learning:** WebGL/Three.js canvases often default to a standard arrow pointer. This lack of visual affordance means users might not realize they can click and drag to pan, orbit, or zoom the 3D scene, hindering discoverability of core controls.
+**Action:** Always apply explicit cursor hints to interactive canvases (e.g., `cursor: grab` on hover, and `cursor: grabbing` on `:active`) to clearly communicate that the area is draggable and interactive.
