@@ -430,6 +430,15 @@ input:checked+.slider:before {
   outline: none;
 }
 
+/* Palette: Explicit cursor feedback for draggable 3D canvas */
+#canvas-container canvas {
+  cursor: grab;
+}
+
+#canvas-container canvas:active {
+  cursor: grabbing;
+}
+
 #canvas-container.drag-over::before {
   content: 'Drop files to load dataset';
   position: absolute;
