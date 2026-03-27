@@ -96,3 +96,7 @@
 ## 2026-03-25 - Explicit Cursor Feedback for Interactive Canvases
 **Learning:** WebGL/Three.js canvases often default to a standard arrow pointer. This lack of visual affordance means users might not realize they can click and drag to pan, orbit, or zoom the 3D scene, hindering discoverability of core controls.
 **Action:** Always apply explicit cursor hints to interactive canvases (e.g., `cursor: grab` on hover, and `cursor: grabbing` on `:active`) to clearly communicate that the area is draggable and interactive.
+
+## 2025-02-13 - [Enhanced Toast Notifications]
+**Learning:** Adding explicit visual icons and distinct ARIA roles (`alert` vs `status`) and `aria-live` regions (`assertive` vs `polite`) significantly improves both standard UX and screen reader clarity for transient notification toasts. Relying solely on a colored left-border makes it hard for colorblind users to immediately distinguish error severity.
+**Action:** When implementing new toast notifications, always embed an SVG icon that corresponds to the message type, and explicitly assign the appropriate `role` and `aria-live` attribute based on the toast's severity to comply with WCAG 1.4.1 (Use of Color).

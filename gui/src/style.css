@@ -731,10 +731,28 @@ input:checked+.slider:before {
   border-left: 4px solid var(--text-secondary);
   transition: opacity 0.3s;
   animation: slide-up 0.3s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toast.toast-error {
   border-left-color: #ef4444;
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast.toast-error .toast-icon {
+  color: #ef4444;
+}
+
+.toast:not(.toast-error) .toast-icon {
+  color: var(--text-secondary);
 }
 
 @keyframes slide-up {
