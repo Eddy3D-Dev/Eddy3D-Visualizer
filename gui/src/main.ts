@@ -456,8 +456,31 @@ export function showToast(message: string, isError = false) {
 
   const toast = document.createElement('div');
   toast.className = `toast ${isError ? 'toast-error' : ''}`;
-  toast.setAttribute('aria-live', 'polite');
-  toast.textContent = message;
+
+  // Accessibility enhancements
+  toast.setAttribute('role', isError ? 'alert' : 'status');
+  toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+
+  // Visual enhancement: Icon
+  const iconWrapper = document.createElement('span');
+  iconWrapper.className = 'toast-icon';
+  iconWrapper.setAttribute('aria-hidden', 'true');
+
+  // Inject SVG depending on type
+  if (isError) {
+    // Alert/Warning icon
+    iconWrapper.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+  } else {
+    // Info icon
+    iconWrapper.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+  }
+
+  // Text container
+  const textSpan = document.createElement('span');
+  textSpan.textContent = message;
+
+  toast.appendChild(iconWrapper);
+  toast.appendChild(textSpan);
 
   container.appendChild(toast);
 
