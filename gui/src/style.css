@@ -439,6 +439,11 @@ input:checked+.slider:before {
   cursor: grabbing;
 }
 
+#canvas-container canvas:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -2px; /* Inward outline to stay within canvas bounds */
+}
+
 #canvas-container.drag-over::before {
   content: 'Drop files to load dataset';
   position: absolute;
