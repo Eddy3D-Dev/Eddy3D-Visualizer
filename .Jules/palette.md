@@ -100,3 +100,7 @@
 ## 2025-02-13 - [Enhanced Toast Notifications]
 **Learning:** Adding explicit visual icons and distinct ARIA roles (`alert` vs `status`) and `aria-live` regions (`assertive` vs `polite`) significantly improves both standard UX and screen reader clarity for transient notification toasts. Relying solely on a colored left-border makes it hard for colorblind users to immediately distinguish error severity.
 **Action:** When implementing new toast notifications, always embed an SVG icon that corresponds to the message type, and explicitly assign the appropriate `role` and `aria-live` attribute based on the toast's severity to comply with WCAG 1.4.1 (Use of Color).
+
+## 2025-02-27 - [Interactive WebGL Canvas Keyboard Accessibility]
+**Learning:** Three.js `OrbitControls` support keyboard interactions (pan/rotate), but the underlying WebGL canvas (`renderer.domElement`) is not inherently focusable by the browser, preventing keyboard-only users from discovering or using these controls.
+**Action:** When setting up an interactive 3D canvas, always make it focusable by setting `tabIndex = 0`, add a descriptive `aria-label` explaining the keyboard controls, assign `role="img"`, and explicitly call `controls.listenToKeyEvents(renderer.domElement)` to bind the controls to the element's focus state. Additionally, provide a clear `:focus-visible` CSS outline to ensure visual feedback when navigating via keyboard.
