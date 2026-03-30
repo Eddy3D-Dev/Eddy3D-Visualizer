@@ -204,7 +204,7 @@ export async function captureAllScreenshots(
   try {
     downloadBtn.classList.add('loading');
     downloadBtn.textContent = 'Capturing...';
-    downloadBtn.disabled = true;
+    downloadBtn.setAttribute('aria-disabled', 'true');
 
     // Set pixel ratio to 1 for consistent output size
     config.renderer.setPixelRatio(1);
@@ -338,7 +338,7 @@ export async function captureAllScreenshots(
     downloadBtn.textContent = '✓ Downloaded!';
     setTimeout(() => {
       downloadBtn.textContent = originalText;
-      downloadBtn.disabled = false;
+      downloadBtn.removeAttribute('aria-disabled');
       downloadBtn.classList.remove('loading');
     }, 2000);
 
@@ -353,7 +353,7 @@ export async function captureAllScreenshots(
     downloadBtn.textContent = '✗ Failed';
     setTimeout(() => {
       downloadBtn.textContent = originalText;
-      downloadBtn.disabled = false;
+      downloadBtn.removeAttribute('aria-disabled');
       downloadBtn.classList.remove('loading');
     }, 2000);
   }
