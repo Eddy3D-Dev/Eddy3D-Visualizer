@@ -1162,6 +1162,8 @@ document.addEventListener('keydown', (e) => {
 // Screenshot download
 document.getElementById('download-screenshots')?.addEventListener('click', () => {
   const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
+  if (downloadBtn.getAttribute('aria-disabled') === 'true') return;
+
   const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement;
   const originalWidth = canvasContainer.clientWidth;
   const originalHeight = canvasContainer.clientHeight;

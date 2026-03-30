@@ -104,3 +104,7 @@
 ## 2025-02-27 - [Interactive WebGL Canvas Keyboard Accessibility]
 **Learning:** Three.js `OrbitControls` support keyboard interactions (pan/rotate), but the underlying WebGL canvas (`renderer.domElement`) is not inherently focusable by the browser, preventing keyboard-only users from discovering or using these controls.
 **Action:** When setting up an interactive 3D canvas, always make it focusable by setting `tabIndex = 0`, add a descriptive `aria-label` explaining the keyboard controls, assign `role="img"`, and explicitly call `controls.listenToKeyEvents(renderer.domElement)` to bind the controls to the element's focus state. Additionally, provide a clear `:focus-visible` CSS outline to ensure visual feedback when navigating via keyboard.
+
+## 2025-02-28 - [Accessible Disabled States for Async Buttons]
+**Learning:** During asynchronous operations (like downloading or processing), simply setting `button.disabled = true` immediately drops keyboard focus if the user is currently focused on that button. This forces screen reader and keyboard users back to the top of the document (`<body>`), completely losing their navigation context.
+**Action:** For buttons that trigger async operations and need to show a "loading" state, use `aria-disabled="true"` instead of the `disabled` property. Update the button's CSS to visually style `[aria-disabled="true"]` identically to `:disabled`, and update the JavaScript click handler to return early if `aria-disabled` is true. This prevents double-clicks while preserving focus.
