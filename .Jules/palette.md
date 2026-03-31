@@ -108,3 +108,7 @@
 ## 2025-02-28 - [Accessible Disabled States for Async Buttons]
 **Learning:** During asynchronous operations (like downloading or processing), simply setting `button.disabled = true` immediately drops keyboard focus if the user is currently focused on that button. This forces screen reader and keyboard users back to the top of the document (`<body>`), completely losing their navigation context.
 **Action:** For buttons that trigger async operations and need to show a "loading" state, use `aria-disabled="true"` instead of the `disabled` property. Update the button's CSS to visually style `[aria-disabled="true"]` identically to `:disabled`, and update the JavaScript click handler to return early if `aria-disabled` is true. This prevents double-clicks while preserving focus.
+
+## 2024-05-15 - Respect User's Motion Preferences
+**Learning:** Hardcoded CSS animations or transitions can negatively affect users with vestibular disorders. Incorporating `@media (prefers-reduced-motion: reduce)` allows applications to selectively disable or drastically shorten motion-heavy effects, improving accessibility without requiring JS logic.
+**Action:** Use a universal override block inside a `prefers-reduced-motion` media query to zero out `animation-duration`, `transition-duration`, and reset `scroll-behavior` globally. Apply this to all new projects that use CSS animations.
