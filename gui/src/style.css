@@ -761,6 +761,36 @@ input:checked+.slider:before {
   color: var(--text-secondary);
 }
 
+.toast-message {
+  flex-grow: 1;
+  margin-right: 8px;
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.toast-close:hover {
+  background-color: var(--secondary-bg);
+  color: var(--text-primary);
+}
+
+.toast-close:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);
