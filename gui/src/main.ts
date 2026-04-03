@@ -478,16 +478,33 @@ export function showToast(message: string, isError = false) {
   // Text container
   const textSpan = document.createElement('span');
   textSpan.textContent = message;
+  textSpan.className = 'toast-message';
+
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.setAttribute('aria-label', 'Close notification');
+  closeBtn.title = 'Close notification';
+  closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+  const removeToast = () => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  };
+
+  closeBtn.addEventListener('click', removeToast);
 
   toast.appendChild(iconWrapper);
   toast.appendChild(textSpan);
+  toast.appendChild(closeBtn);
 
   container.appendChild(toast);
 
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
+  const timeoutId = setTimeout(removeToast, 4000);
+
+  // Pause timer on hover/focus for better accessibility
+  toast.addEventListener('mouseenter', () => clearTimeout(timeoutId));
+  toast.addEventListener('focusin', () => clearTimeout(timeoutId));
 }
 
 function updateEmptyStateUI() {
