@@ -336,10 +336,10 @@ export async function captureAllScreenshots(
     config.zoomToFit();
 
     downloadBtn.textContent = '✓ Downloaded!';
+    downloadBtn.classList.remove('loading');
     setTimeout(() => {
       downloadBtn.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
-      downloadBtn.classList.remove('loading');
     }, 2000);
 
   } catch (error) {
@@ -351,10 +351,10 @@ export async function captureAllScreenshots(
     config.zoomToFit();
 
     downloadBtn.textContent = '✗ Failed';
+    downloadBtn.classList.remove('loading');
     setTimeout(() => {
       downloadBtn.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
-      downloadBtn.classList.remove('loading');
     }, 2000);
   }
 }
