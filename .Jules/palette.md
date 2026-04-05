@@ -4,3 +4,6 @@
 ## 2025-04-04 - Clarify Output Constraints in Dropdowns
 **Learning:** Using domain-specific but technically misleading labels (like "150px" when referring to a DPI multiplier that results in a 1500px image) creates a confusing user experience. Users either expect a tiny thumbnail or don't realize they can export very high-resolution images.
 **Action:** Always ensure UI labels for export/download settings accurately reflect the final output unit and dimensions (e.g., using "1500x1500 px" instead of "150px") and have corresponding accurate `aria-label`s.
+## 2025-05-18 - Async Loading Button UX
+**Learning:** Absolute positioning spinners within a button can easily overlap with dynamic progress text (like "Capturing 1/2...") if sufficient inner padding is not reserved. In addition, when transitioning from a loading state to a final success/error state (e.g., displaying "✓ Downloaded!"), the loading spinner should immediately disappear rather than persisting alongside the final status message while waiting for the timer to clear.
+**Action:** Always reserve appropriate `padding` on a button when it enters a `.loading` state to prevent text/spinner overlap. Remove the `.loading` class (and thereby the spinner) synchronously when the button text changes to a completion status, rather than inside the timeout that eventually resets the button entirely.

@@ -207,6 +207,9 @@ h1 {
   text-align: center;
   border: none;
   transition: background-color 0.2s, opacity 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .download-btn:hover:not(:disabled):not([aria-disabled="true"]) {
@@ -223,6 +226,7 @@ h1 {
 .download-btn.loading {
   position: relative;
   pointer-events: none;
+  padding-right: 36px;
 }
 
 .download-btn.loading::after {
