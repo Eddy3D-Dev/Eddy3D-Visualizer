@@ -117,7 +117,7 @@
           <div class="toggle-item disabled" id="point-size-control" style="flex-direction: column; align-items: flex-start;" title="Disable 'Gapless Points' to adjust manually">
             <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
               <label for="point-size">Point Size</label>
-              <span id="point-size-display" style="font-size: 0.8em; color: var(--text-secondary);">3.0</span>
+              <output id="point-size-display" for="point-size" style="font-size: 0.8em; color: var(--text-secondary);">3.0</output>
             </div>
             <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" disabled aria-label="Point Size" title="Disable 'Gapless Points' to adjust manually">
           </div>
@@ -151,14 +151,14 @@
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the minimum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-min">Min Value</label>
-                <span id="min-val-display" style="font-size: 0.8em; color: var(--text-secondary);">0</span>
+                <output id="min-val-display" for="colormap-min" style="font-size: 0.8em; color: var(--text-secondary);">0</output>
               </div>
               <input type="range" id="colormap-min" class="range-input" aria-label="Colormap Minimum Value">
             </div>
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the maximum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-max">Max Value</label>
-                <span id="max-val-display" style="font-size: 0.8em; color: var(--text-secondary);">1</span>
+                <output id="max-val-display" for="colormap-max" style="font-size: 0.8em; color: var(--text-secondary);">1</output>
               </div>
               <input type="range" id="colormap-max" class="range-input" aria-label="Colormap Maximum Value">
             </div>
