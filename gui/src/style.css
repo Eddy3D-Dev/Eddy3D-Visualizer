@@ -179,7 +179,9 @@ h1 {
   width: 100%;
   box-sizing: border-box;
   text-align: center;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.1s;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .custom-file-upload:hover {
@@ -206,10 +208,12 @@ h1 {
   box-sizing: border-box;
   text-align: center;
   border: none;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition: background-color 0.2s, opacity 0.2s, transform 0.1s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .download-btn:hover:not(:disabled):not([aria-disabled="true"]) {
@@ -271,6 +275,8 @@ h1 {
   cursor: pointer;
   min-width: 70px;
   transition: border-color 0.2s;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .dpi-select:hover:not(:disabled),
@@ -336,6 +342,8 @@ h1 {
   margin-top: 5px;
   cursor: pointer;
   transition: border-color 0.2s;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 /* Colormap Dropdown */
@@ -346,6 +354,8 @@ h1 {
   border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: border-color 0.2s;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 /* Toggle Label */
@@ -367,6 +377,8 @@ h1 {
   display: inline-block;
   width: 44px;
   height: 24px;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .switch input {
@@ -587,6 +599,8 @@ input:checked+.slider:before {
   font-family: inherit;
   color: inherit;
   transition: border-color 0.2s;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .collapsible-header:hover {
@@ -647,6 +661,8 @@ input:checked+.slider:before {
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
   /* Stronger shadow */
   transition: left 0.3s ease-in-out;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .arrow-icon {

@@ -10,3 +10,6 @@
 ## 2025-10-24 - Enhance Accessibility of Dynamic Range Slider Displays
 **Learning:** Using generic `<span>` or `<div>` elements to display the current value of a range slider (`<input type="range">`) misses an opportunity to provide context to assistive technologies. By using the semantic `<output>` element, screen readers can automatically understand that the value is the result of a user action.
 **Action:** Always use `<output>` elements to display dynamically changing values from form controls (like range sliders). Ensure the `for` attribute is set on the `<output>` to explicitly link it to the `id` of the input control that determines its value.
+## 2025-10-25 - Prevent Accidental Text Selection on UI Controls
+**Learning:** Frequent, rapid interactions with UI controls (like switches, buttons, and dropdowns) can inadvertently trigger text selection, confusing users and degrading the native app feel. Additionally, touch devices may introduce slight delays or double-tap-to-zoom behavior on these elements if not explicitly managed.
+**Action:** Always apply `user-select: none;` and `touch-action: manipulation;` to dense, highly interactive UI elements (buttons, toggles, headers, select menus) to eliminate text highlighting during fast clicks and disable double-tap zooming on touch screens for a crisper response.
