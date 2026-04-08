@@ -13,3 +13,6 @@
 ## 2025-10-25 - Prevent Accidental Text Selection on UI Controls
 **Learning:** Frequent, rapid interactions with UI controls (like switches, buttons, and dropdowns) can inadvertently trigger text selection, confusing users and degrading the native app feel. Additionally, touch devices may introduce slight delays or double-tap-to-zoom behavior on these elements if not explicitly managed.
 **Action:** Always apply `user-select: none;` and `touch-action: manipulation;` to dense, highly interactive UI elements (buttons, toggles, headers, select menus) to eliminate text highlighting during fast clicks and disable double-tap zooming on touch screens for a crisper response.
+## 2025-10-26 - Add Canvas Interaction Hints for WebGL Viewers
+**Learning:** 3D canvases implemented with Three.js/WebGL lack native affordances for basic interactions (like panning vs. rotating), leaving users to guess which mouse buttons to use. While `cursor: grab` helps, it doesn't explain right-click or scroll wheel functions.
+**Action:** Always provide a subtle, non-intrusive visual hint overlay (e.g., in a corner of the canvas) that explicitly lists the mouse and keyboard controls required to navigate the 3D scene.
