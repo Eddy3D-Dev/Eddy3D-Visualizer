@@ -509,9 +509,15 @@ export function showToast(message: string, isError = false) {
 
 function updateEmptyStateUI() {
   const emptyState = document.getElementById('empty-state');
-  if (emptyState) {
+  const canvasContainer = document.getElementById('canvas-container');
+  if (emptyState && canvasContainer) {
     const hasData = csvLoader.getDatasetCount() > 0;
     emptyState.style.display = hasData ? 'none' : 'flex';
+    if (hasData) {
+      canvasContainer.classList.add('has-data');
+    } else {
+      canvasContainer.classList.remove('has-data');
+    }
   }
 }
 

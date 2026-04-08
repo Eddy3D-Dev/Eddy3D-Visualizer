@@ -562,6 +562,40 @@ input:checked+.slider:before {
   opacity: 0.7;
 }
 
+/* Canvas Interaction Hints */
+.canvas-hints {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#canvas-container.has-data .canvas-hints {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.canvas-hints strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -724,6 +758,11 @@ input:checked+.slider:before {
   /* Logo scaling */
   .main-logo {
     max-width: 140px;
+  }
+
+  /* Hide canvas mouse hints on mobile where touch controls rule */
+  .canvas-hints {
+    display: none !important;
   }
 }
 
