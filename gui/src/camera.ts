@@ -42,7 +42,7 @@ export function setupCameras(
   controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: THREE.MOUSE.ROTATE
+    RIGHT: THREE.MOUSE.PAN
   };
   controls.listenToKeyEvents(renderer.domElement);
 
@@ -75,7 +75,7 @@ export function switchCamera(
   newControls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: THREE.MOUSE.ROTATE
+    RIGHT: THREE.MOUSE.PAN
   };
   newControls.listenToKeyEvents(renderer.domElement);
   newControls.target.copy(oldTarget);

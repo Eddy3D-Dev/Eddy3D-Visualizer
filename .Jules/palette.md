@@ -16,3 +16,6 @@
 ## 2025-10-26 - Add Canvas Interaction Hints for WebGL Viewers
 **Learning:** 3D canvases implemented with Three.js/WebGL lack native affordances for basic interactions (like panning vs. rotating), leaving users to guess which mouse buttons to use. While `cursor: grab` helps, it doesn't explain right-click or scroll wheel functions.
 **Action:** Always provide a subtle, non-intrusive visual hint overlay (e.g., in a corner of the canvas) that explicitly lists the mouse and keyboard controls required to navigate the 3D scene.
+## 2026-04-09 - Explicitly Advertise Keyboard Alternatives for WebGL Canvases
+**Learning:** While WebGL canvases might technically support keyboard interactions (e.g. via `listenToKeyEvents` for `OrbitControls`), users rely heavily on on-screen hints to discover these alternative navigation methods. If hints only mention mouse controls, screen reader users or keyboard-only users may assume the canvas is inaccessible.
+**Action:** When implementing visual hints for 3D interactions, always explicitly include keyboard alternatives (like "Arrows Pan") alongside mouse instructions to improve discoverability and perceived accessibility.
