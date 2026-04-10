@@ -512,9 +512,18 @@ function updateEmptyStateUI() {
   const canvasContainer = document.getElementById('canvas-container');
   if (emptyState && canvasContainer) {
     const hasData = csvLoader.getDatasetCount() > 0;
+
+    // Check if the currently focused element is inside the empty state before hiding it
+    const emptyStateHasFocus = emptyState.contains(document.activeElement);
+
     emptyState.style.display = hasData ? 'none' : 'flex';
     if (hasData) {
       canvasContainer.classList.add('has-data');
+
+      // If focus was inside the empty state, move it to the canvas container to prevent focus drop to body
+      if (emptyStateHasFocus) {
+        canvasContainer.focus();
+      }
     } else {
       canvasContainer.classList.remove('has-data');
     }
