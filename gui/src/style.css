@@ -641,6 +641,12 @@ input:checked+.slider:before {
   border-bottom-color: var(--border-color);
 }
 
+.collapsible-header:active,
+.menu-toggle:active {
+  transform: scale(0.98);
+  transition: transform 0.1s;
+}
+
 .collapsible-header:focus-visible {
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
