@@ -167,7 +167,10 @@ h1 {
 
 /* Custom Upload Button */
 .custom-file-upload {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background-color: #000000;
   color: white;
   padding: 10px 16px;
@@ -195,7 +198,10 @@ h1 {
 
 /* Download Button */
 .download-btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background-color: #2563eb; /* Palette: Improved color contrast for better readability */
   color: white;
   padding: 10px 16px;
@@ -214,6 +220,10 @@ h1 {
   text-overflow: ellipsis;
   user-select: none;
   touch-action: manipulation;
+}
+
+.btn-icon {
+  flex-shrink: 0;
 }
 
 .download-btn:hover:not(:disabled):not([aria-disabled="true"]) {

@@ -196,7 +196,7 @@ export async function captureAllScreenshots(
   originalHeight: number,
   originalPixelRatio: number
 ) {
-  const originalText = downloadBtn.textContent;
+  const originalHTML = downloadBtn.innerHTML;
 
   // Get selected resolution (multiply by 10 to get actual pixels: 100->1000, 150->1500, 300->3000)
   const targetSize = parseInt(dpiSelect.value) * 10;
@@ -338,7 +338,7 @@ export async function captureAllScreenshots(
     downloadBtn.textContent = '✓ Downloaded!';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.textContent = originalText;
+      downloadBtn.innerHTML = originalHTML;
       downloadBtn.removeAttribute('aria-disabled');
     }, 2000);
 
@@ -353,7 +353,7 @@ export async function captureAllScreenshots(
     downloadBtn.textContent = '✗ Failed';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.textContent = originalText;
+      downloadBtn.innerHTML = originalHTML;
       downloadBtn.removeAttribute('aria-disabled');
     }, 2000);
   }
