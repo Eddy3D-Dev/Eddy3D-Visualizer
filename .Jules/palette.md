@@ -9,3 +9,7 @@
 ## 2026-04-19 - Prevent Ungraceful Text Truncation with Icons
 **Learning:** For narrow fixed-width UI elements like sidebar buttons, long descriptive text (e.g., "Download Screenshots") can easily overflow and truncate ("Downloa...") on smaller screens or when UI scales change, leading to a degraded UX.
 **Action:** Replace long text with a concise verb and an accompanying SVG icon (e.g., `<svg> Download`). Use `display: inline-flex` with `gap` and `align-items: center` for perfect alignment, and apply `flex-shrink: 0` to the icon to ensure it never distorts when space gets tight.
+
+## 2026-04-19 - Fix Off-Canvas Menu Keyboard Trapping
+**Learning:** Sliding off-canvas menus using only `transform: translateX(-100%)` visually hides them, but leaves their interactive children (buttons, links, inputs) in the browser's accessibility tree and keyboard focus order. This traps screen reader and keyboard users in an invisible section of the UI.
+**Action:** Always pair `transform` with `visibility: hidden` for the closed state and `visibility: visible` for the open state. To preserve the slide animation, sequence the CSS `transition` property for `visibility` with a delay when closing (e.g., `visibility 0s 0.3s`) and no delay when opening (`visibility 0s 0s`).

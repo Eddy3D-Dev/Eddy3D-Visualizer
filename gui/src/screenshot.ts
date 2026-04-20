@@ -200,10 +200,11 @@ export async function captureAllScreenshots(
 
   // Get selected resolution (multiply by 10 to get actual pixels: 100->1000, 150->1500, 300->3000)
   const targetSize = parseInt(dpiSelect.value) * 10;
+  const textSpan = downloadBtn.querySelector('span');
 
   try {
     downloadBtn.classList.add('loading');
-    downloadBtn.textContent = 'Capturing...';
+    if (textSpan) textSpan.textContent = 'Capturing...';
     downloadBtn.setAttribute('aria-disabled', 'true');
 
     // Set pixel ratio to 1 for consistent output size
@@ -264,7 +265,7 @@ export async function captureAllScreenshots(
 
     for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
-      downloadBtn.textContent = `Capturing ${i + 1}/${total}...`;
+      if (textSpan) textSpan.textContent = `Capturing ${i + 1}/${total}...`;
 
       if (pair.pred) {
         // === PAIRED FILES: Capture both and merge ===
@@ -324,7 +325,7 @@ export async function captureAllScreenshots(
       }
     }
 
-    downloadBtn.textContent = 'Creating ZIP...';
+    if (textSpan) textSpan.textContent = 'Creating ZIP...';
 
     // Generate and download ZIP
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -335,7 +336,7 @@ export async function captureAllScreenshots(
     config.renderer.setSize(originalWidth, originalHeight, false);
     config.zoomToFit();
 
-    downloadBtn.textContent = '✓ Downloaded!';
+    if (textSpan) textSpan.textContent = '✓ Downloaded!';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
       downloadBtn.innerHTML = originalHTML;
@@ -350,7 +351,7 @@ export async function captureAllScreenshots(
     config.renderer.setSize(originalWidth, originalHeight, false);
     config.zoomToFit();
 
-    downloadBtn.textContent = '✗ Failed';
+    if (textSpan) textSpan.textContent = '✗ Failed';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
       downloadBtn.innerHTML = originalHTML;
