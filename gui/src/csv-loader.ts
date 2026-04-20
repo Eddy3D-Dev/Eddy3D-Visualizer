@@ -47,6 +47,7 @@ export class CSVLoader {
       const yIdx = header.findIndex(h => h.toLowerCase() === 'y');
       const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
       const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
+      const kIdx = header.findIndex(h => h.toLowerCase() === 'k');
       const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height'));
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
@@ -54,9 +55,10 @@ export class CSVLoader {
         return;
       }
 
-      const newData: SensorDataPoint[] = [];
-      // ⚡ Bolt Optimization: include hIdx in maxIdx to ensure we parse height if present
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx);
+      const newDataU: SensorDataPoint[] = [];
+      const newDataK: SensorDataPoint[] = [];
+      // ⚡ Bolt Optimization: include hIdx and kIdx in maxIdx to ensure we parse height/k if present
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx);
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -80,8 +82,9 @@ export class CSVLoader {
             let currentPos = lineStart;
             let colIdx = 0;
             let x = NaN, y = NaN, z = NaN;
-            // Default val/h to 0 if column not in header, else NaN (expecting value)
+            // Default val/k/h to 0 if column not in header, else NaN (expecting value)
             let val = valIdx !== -1 ? NaN : 0;
+            let kVal = kIdx !== -1 ? NaN : 0;
             let h = hIdx !== -1 ? NaN : 0;
 
             while (currentPos <= contentEnd) {
@@ -97,6 +100,8 @@ export class CSVLoader {
                     z = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === valIdx) {
                     val = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === kIdx) {
+                    kVal = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === hIdx) {
                     h = parseFloat(text.substring(currentPos, nextComma));
                 }
@@ -109,16 +114,32 @@ export class CSVLoader {
                 colIdx++;
             }
 
-            if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-                newData.push({ x, y, z, val, h });
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                if (valIdx !== -1 && !isNaN(val)) {
+                    newDataU.push({ x, y, z, val, h });
+                } else if (valIdx === -1 && !isNaN(val)) {
+                    // Fallback for when no u column is found but x,y,z are valid
+                    newDataU.push({ x, y, z, val, h });
+                }
+
+                if (kIdx !== -1 && !isNaN(kVal)) {
+                    newDataK.push({ x, y, z, val: kVal, h });
+                }
             }
         }
 
         lineStart = lineEnd + 1;
       }
 
-      if (newData.length > 0) {
-        this.loadedDatasets.set(name, newData);
+      if (newDataU.length > 0) {
+        this.loadedDatasets.set(name, newDataU);
+      }
+      
+      if (newDataK.length > 0) {
+        this.loadedDatasets.set(name + ' (k)', newDataK);
+      }
+
+      if (newDataU.length > 0 || newDataK.length > 0) {
         this.onUpdateUI();
       }
     } catch (err) {

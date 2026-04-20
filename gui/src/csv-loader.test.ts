@@ -102,6 +102,22 @@ describe('CSVLoader', () => {
       loader.processCSVData('x,y,z,mag_u\n5,6,7,8\n9,10,11,12', 'dup.csv');
       expect(loader.getDataset('dup.csv')).toHaveLength(2);
     });
+
+    it('detects k column and creates a separate dataset', () => {
+      const { loader } = makeLoader();
+      const csv = 'x,y,z,u,k\n1,2,3,4,0.5';
+      loader.processCSVData(csv, 'k_test.csv');
+
+      expect(loader.hasDataset('k_test.csv')).toBe(true);
+      expect(loader.hasDataset('k_test.csv (k)')).toBe(true);
+      expect(loader.getDatasetCount()).toBe(2);
+
+      const uData = loader.getDataset('k_test.csv')!;
+      expect(uData[0].val).toBe(4);
+
+      const kData = loader.getDataset('k_test.csv (k)')!;
+      expect(kData[0].val).toBe(0.5);
+    });
   });
 
   describe('dataset management', () => {
