@@ -13,3 +13,6 @@
 ## 2026-04-19 - Fix Off-Canvas Menu Keyboard Trapping
 **Learning:** Sliding off-canvas menus using only `transform: translateX(-100%)` visually hides them, but leaves their interactive children (buttons, links, inputs) in the browser's accessibility tree and keyboard focus order. This traps screen reader and keyboard users in an invisible section of the UI.
 **Action:** Always pair `transform` with `visibility: hidden` for the closed state and `visibility: visible` for the open state. To preserve the slide animation, sequence the CSS `transition` property for `visibility` with a delay when closing (e.g., `visibility 0s 0.3s`) and no delay when opening (`visibility 0s 0s`).
+## 2026-04-23 - Enhance Keyboard Shortcut Hints with Semantic kbd Tags
+**Learning:** Using semantic HTML `<kbd>` tags instead of generic presentation tags like `<strong>` for keyboard/mouse interaction hints provides better semantic meaning for assistive technologies. Additionally, styling these tags to look like physical keycaps improves visual scannability and gives the application a more polished, professional feel.
+**Action:** When displaying keyboard shortcuts or interaction hints, always use the `<kbd>` tag and apply a consistent, tactile CSS style (borders, border-radius, background, and subtle shadow) across the design system.
