@@ -46,9 +46,13 @@ export class CSVLoader {
       const xIdx = header.findIndex(h => h.toLowerCase() === 'x');
       const yIdx = header.findIndex(h => h.toLowerCase() === 'y');
       const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
-      const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
+      // Match velocity column exactly — avoid includes() which would falsely match mag_u_roof
+      const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u');
       const kIdx = header.findIndex(h => h.toLowerCase() === 'k');
       const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height'));
+      // Roof-level value columns
+      const roofIdx = header.findIndex(h => h.toLowerCase() === 'mag_u_roof');
+      const kRoofIdx = header.findIndex(h => h.toLowerCase() === 'k_roof');
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
@@ -57,8 +61,10 @@ export class CSVLoader {
 
       const newDataU: SensorDataPoint[] = [];
       const newDataK: SensorDataPoint[] = [];
-      // ⚡ Bolt Optimization: include hIdx and kIdx in maxIdx to ensure we parse height/k if present
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx);
+      const newDataRoof: SensorDataPoint[] = [];
+      const newDataKRoof: SensorDataPoint[] = [];
+      // ⚡ Bolt Optimization: include all known column indices in maxIdx to ensure we parse all present columns
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx, roofIdx, kRoofIdx);
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -82,10 +88,12 @@ export class CSVLoader {
             let currentPos = lineStart;
             let colIdx = 0;
             let x = NaN, y = NaN, z = NaN;
-            // Default val/k/h to 0 if column not in header, else NaN (expecting value)
+            // Default val/k/h/roof to 0 if column not in header, else NaN (expecting value)
             let val = valIdx !== -1 ? NaN : 0;
             let kVal = kIdx !== -1 ? NaN : 0;
             let h = hIdx !== -1 ? NaN : 0;
+            let roofVal = roofIdx !== -1 ? NaN : 0;
+            let kRoofVal = kRoofIdx !== -1 ? NaN : 0;
 
             while (currentPos <= contentEnd) {
                 let nextComma = text.indexOf(',', currentPos);
@@ -104,6 +112,10 @@ export class CSVLoader {
                     kVal = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === hIdx) {
                     h = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === roofIdx) {
+                    roofVal = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === kRoofIdx) {
+                    kRoofVal = parseFloat(text.substring(currentPos, nextComma));
                 }
 
                 // Stop if we passed the last column we need
@@ -125,6 +137,14 @@ export class CSVLoader {
                 if (kIdx !== -1 && !isNaN(kVal)) {
                     newDataK.push({ x, y, z, val: kVal, h });
                 }
+
+                if (roofIdx !== -1 && !isNaN(roofVal)) {
+                    newDataRoof.push({ x, y, z, val: roofVal, h });
+                }
+
+                if (kRoofIdx !== -1 && !isNaN(kRoofVal)) {
+                    newDataKRoof.push({ x, y, z, val: kRoofVal, h });
+                }
             }
         }
 
@@ -139,7 +159,15 @@ export class CSVLoader {
         this.loadedDatasets.set(name + ' (k)', newDataK);
       }
 
-      if (newDataU.length > 0 || newDataK.length > 0) {
+      if (newDataRoof.length > 0) {
+        this.loadedDatasets.set(name + ' (roof)', newDataRoof);
+      }
+
+      if (newDataKRoof.length > 0) {
+        this.loadedDatasets.set(name + ' (k_roof)', newDataKRoof);
+      }
+
+      if (newDataU.length > 0 || newDataK.length > 0 || newDataRoof.length > 0 || newDataKRoof.length > 0) {
         this.onUpdateUI();
       }
     } catch (err) {

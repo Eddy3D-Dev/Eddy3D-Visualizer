@@ -118,6 +118,72 @@ describe('CSVLoader', () => {
       const kData = loader.getDataset('k_test.csv (k)')!;
       expect(kData[0].val).toBe(0.5);
     });
+
+    it('detects mag_U_roof column and creates a separate roof dataset', () => {
+      const { loader } = makeLoader();
+      const csv = 'x,y,z,mag_U,mag_U_roof,Bldg_height\n1,2,3,4.0,1.18,14.5\n5,6,7,0.0,0.0,0.0';
+      loader.processCSVData(csv, 'roof_test.csv');
+
+      expect(loader.hasDataset('roof_test.csv')).toBe(true);
+      expect(loader.hasDataset('roof_test.csv (roof)')).toBe(true);
+
+      const uData = loader.getDataset('roof_test.csv')!;
+      expect(uData[0].val).toBe(4.0);
+
+      const roofData = loader.getDataset('roof_test.csv (roof)')!;
+      expect(roofData).toHaveLength(2);
+      expect(roofData[0].val).toBe(1.18);
+      expect(roofData[1].val).toBe(0.0);
+    });
+
+    it('detects k_roof column and creates a separate k_roof dataset', () => {
+      const { loader } = makeLoader();
+      const csv = 'x,y,z,mag_U,k,k_roof\n1,2,3,4.0,0.5,0.3';
+      loader.processCSVData(csv, 'k_roof_test.csv');
+
+      expect(loader.hasDataset('k_roof_test.csv')).toBe(true);
+      expect(loader.hasDataset('k_roof_test.csv (k)')).toBe(true);
+      expect(loader.hasDataset('k_roof_test.csv (k_roof)')).toBe(true);
+      expect(loader.getDatasetCount()).toBe(3);
+
+      const kRoofData = loader.getDataset('k_roof_test.csv (k_roof)')!;
+      expect(kRoofData[0].val).toBe(0.3);
+    });
+
+    it('handles full ML pipeline CSV with all columns', () => {
+      const { loader } = makeLoader();
+      const csv = 'X,Y,Z_relative,SDF,Bldg_height,U_over_Uref,dir_sin,dir_cos,mag_U,k,mag_U_roof\n' +
+        '-485.0,-54.5,1.8,-291.22,0.0,0.26,0.0,-1.0,0.0,0.0,0.0\n' +
+        '-195.0,-14.5,1.8,-1.3,14.57,0.26,0.0,-1.0,0.0,0.0,1.18';
+      loader.processCSVData(csv, 'full_pipeline.csv');
+
+      expect(loader.hasDataset('full_pipeline.csv')).toBe(true);
+      expect(loader.hasDataset('full_pipeline.csv (k)')).toBe(true);
+      expect(loader.hasDataset('full_pipeline.csv (roof)')).toBe(true);
+      expect(loader.getDatasetCount()).toBe(3);
+
+      const uData = loader.getDataset('full_pipeline.csv')!;
+      expect(uData).toHaveLength(2);
+      expect(uData[0].val).toBe(0.0);
+      expect(uData[0].h).toBe(0.0);
+      expect(uData[1].h).toBe(14.57);
+
+      const roofData = loader.getDataset('full_pipeline.csv (roof)')!;
+      expect(roofData[1].val).toBe(1.18);
+    });
+
+    it('does not match mag_u_roof as the velocity column', () => {
+      const { loader } = makeLoader();
+      // CSV with only mag_U_roof, no mag_U — val should default to 0
+      const csv = 'x,y,z,mag_U_roof\n1,2,3,5.5';
+      loader.processCSVData(csv, 'only_roof.csv');
+
+      const uData = loader.getDataset('only_roof.csv')!;
+      expect(uData[0].val).toBe(0); // val should be 0 since there is no mag_u column
+
+      const roofData = loader.getDataset('only_roof.csv (roof)')!;
+      expect(roofData[0].val).toBe(5.5);
+    });
   });
 
   describe('dataset management', () => {
