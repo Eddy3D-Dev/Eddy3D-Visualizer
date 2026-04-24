@@ -119,42 +119,47 @@ describe('CSVLoader', () => {
       expect(kData[0].val).toBe(0.5);
     });
 
-    it('detects mag_U_roof column and creates a separate roof dataset', () => {
+    it('merges mag_U_roof into main dataset at roof height', () => {
       const { loader } = makeLoader();
+      // Row 1: building (h=14.5), Row 2: no building (h=0)
       const csv = 'x,y,z,mag_U,mag_U_roof,Bldg_height\n1,2,3,4.0,1.18,14.5\n5,6,7,0.0,0.0,0.0';
       loader.processCSVData(csv, 'roof_test.csv');
 
       expect(loader.hasDataset('roof_test.csv')).toBe(true);
-      expect(loader.hasDataset('roof_test.csv (roof)')).toBe(true);
+      expect(loader.hasDataset('roof_test.csv (roof)')).toBe(false); // no separate dataset
 
-      const uData = loader.getDataset('roof_test.csv')!;
-      expect(uData[0].val).toBe(4.0);
-      expect(uData[0].z).toBe(3); // pedestrian-level z stays unchanged
+      const data = loader.getDataset('roof_test.csv')!;
+      // 2 pedestrian points + 1 roof point (only for the building row)
+      expect(data).toHaveLength(3);
 
-      const roofData = loader.getDataset('roof_test.csv (roof)')!;
-      expect(roofData).toHaveLength(2);
-      expect(roofData[0].val).toBe(1.18);
-      expect(roofData[0].z).toBe(14.5 + 3); // z = Bldg_height + Z_relative for buildings
-      expect(roofData[1].val).toBe(0.0);
-      expect(roofData[1].z).toBe(7); // z stays at Z_relative when Bldg_height is 0
+      // Pedestrian points stay at original z
+      expect(data[0]).toEqual({ x: 1, y: 2, z: 3, val: 4.0, h: 14.5 });
+      expect(data[2]).toEqual({ x: 5, y: 6, z: 7, val: 0.0, h: 0 });
+
+      // Roof point at z = Bldg_height + Z_relative
+      expect(data[1].x).toBe(1);
+      expect(data[1].z).toBe(14.5 + 3);
+      expect(data[1].val).toBe(1.18);
     });
 
-    it('detects k_roof column and creates a separate k_roof dataset at roof height', () => {
+    it('merges k_roof into k dataset at roof height', () => {
       const { loader } = makeLoader();
       const csv = 'x,y,z,mag_U,k,k_roof,Bldg_height\n1,2,3,4.0,0.5,0.3,10.0';
       loader.processCSVData(csv, 'k_roof_test.csv');
 
       expect(loader.hasDataset('k_roof_test.csv')).toBe(true);
       expect(loader.hasDataset('k_roof_test.csv (k)')).toBe(true);
-      expect(loader.hasDataset('k_roof_test.csv (k_roof)')).toBe(true);
-      expect(loader.getDatasetCount()).toBe(3);
+      expect(loader.getDatasetCount()).toBe(2); // no separate k_roof dataset
 
-      const kRoofData = loader.getDataset('k_roof_test.csv (k_roof)')!;
-      expect(kRoofData[0].val).toBe(0.3);
-      expect(kRoofData[0].z).toBe(10.0 + 3); // z = Bldg_height + Z_relative
+      const kData = loader.getDataset('k_roof_test.csv (k)')!;
+      // 1 pedestrian k point + 1 roof k point
+      expect(kData).toHaveLength(2);
+      expect(kData[0]).toEqual({ x: 1, y: 2, z: 3, val: 0.5, h: 10.0 });
+      expect(kData[1].z).toBe(10.0 + 3);
+      expect(kData[1].val).toBe(0.3);
     });
 
-    it('handles full ML pipeline CSV with all columns and correct roof z', () => {
+    it('handles full ML pipeline CSV with merged roof data', () => {
       const { loader } = makeLoader();
       const csv = 'X,Y,Z_relative,SDF,Bldg_height,U_over_Uref,dir_sin,dir_cos,mag_U,k,mag_U_roof\n' +
         '-485.0,-54.5,1.8,-291.22,0.0,0.26,0.0,-1.0,0.0,0.0,0.0\n' +
@@ -163,33 +168,28 @@ describe('CSVLoader', () => {
 
       expect(loader.hasDataset('full_pipeline.csv')).toBe(true);
       expect(loader.hasDataset('full_pipeline.csv (k)')).toBe(true);
-      expect(loader.hasDataset('full_pipeline.csv (roof)')).toBe(true);
-      expect(loader.getDatasetCount()).toBe(3);
+      expect(loader.getDatasetCount()).toBe(2); // no separate roof dataset
 
       const uData = loader.getDataset('full_pipeline.csv')!;
-      expect(uData).toHaveLength(2);
-      expect(uData[0].z).toBe(1.8);   // pedestrian z unchanged
-      expect(uData[0].h).toBe(0.0);
-      expect(uData[1].z).toBe(1.8);   // pedestrian z unchanged even with building
-      expect(uData[1].h).toBe(14.57);
-
-      const roofData = loader.getDataset('full_pipeline.csv (roof)')!;
-      expect(roofData[0].z).toBe(1.8);           // no building → stays at Z_relative
-      expect(roofData[1].z).toBeCloseTo(14.57 + 1.8); // building → Bldg_height + Z_relative
-      expect(roofData[1].val).toBe(1.18);
+      // 2 pedestrian + 1 roof (only for building row with h=14.57)
+      expect(uData).toHaveLength(3);
+      expect(uData[0].z).toBe(1.8);   // pedestrian
+      expect(uData[1].z).toBe(1.8);   // pedestrian (building row)
+      // Roof point for the building
+      expect(uData[2].z).toBeCloseTo(14.57 + 1.8);
+      expect(uData[2].val).toBe(1.18);
     });
 
     it('does not match mag_u_roof as the velocity column', () => {
       const { loader } = makeLoader();
-      // CSV with only mag_U_roof, no mag_U — val should default to 0
+      // CSV with only mag_U_roof, no mag_U — val defaults to 0, no building so no roof point added
       const csv = 'x,y,z,mag_U_roof\n1,2,3,5.5';
       loader.processCSVData(csv, 'only_roof.csv');
 
-      const uData = loader.getDataset('only_roof.csv')!;
-      expect(uData[0].val).toBe(0); // val should be 0 since there is no mag_u column
-
-      const roofData = loader.getDataset('only_roof.csv (roof)')!;
-      expect(roofData[0].val).toBe(5.5);
+      const data = loader.getDataset('only_roof.csv')!;
+      expect(data).toHaveLength(1);
+      expect(data[0].val).toBe(0); // no mag_u column, val defaults to 0
+      // No roof point added since no Bldg_height column / h=0
     });
   });
 

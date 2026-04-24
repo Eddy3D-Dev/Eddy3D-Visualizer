@@ -61,8 +61,6 @@ export class CSVLoader {
 
       const newDataU: SensorDataPoint[] = [];
       const newDataK: SensorDataPoint[] = [];
-      const newDataRoof: SensorDataPoint[] = [];
-      const newDataKRoof: SensorDataPoint[] = [];
       // ⚡ Bolt Optimization: include all known column indices in maxIdx to ensure we parse all present columns
       const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx, roofIdx, kRoofIdx);
 
@@ -138,15 +136,15 @@ export class CSVLoader {
                     newDataK.push({ x, y, z, val: kVal, h });
                 }
 
-                // Roof data points are placed at their actual height: Bldg_height + Z_relative
-                if (roofIdx !== -1 && !isNaN(roofVal)) {
-                    const roofZ = (!isNaN(h) && h > 0) ? h + z : z;
-                    newDataRoof.push({ x, y, z: roofZ, val: roofVal, h });
+                // Merge roof data into the main datasets at actual roof height
+                if (roofIdx !== -1 && !isNaN(roofVal) && !isNaN(h) && h > 0) {
+                    const roofZ = h + z;
+                    newDataU.push({ x, y, z: roofZ, val: roofVal, h });
                 }
 
-                if (kRoofIdx !== -1 && !isNaN(kRoofVal)) {
-                    const roofZ = (!isNaN(h) && h > 0) ? h + z : z;
-                    newDataKRoof.push({ x, y, z: roofZ, val: kRoofVal, h });
+                if (kRoofIdx !== -1 && !isNaN(kRoofVal) && !isNaN(h) && h > 0) {
+                    const roofZ = h + z;
+                    newDataK.push({ x, y, z: roofZ, val: kRoofVal, h });
                 }
             }
         }
@@ -162,15 +160,7 @@ export class CSVLoader {
         this.loadedDatasets.set(name + ' (k)', newDataK);
       }
 
-      if (newDataRoof.length > 0) {
-        this.loadedDatasets.set(name + ' (roof)', newDataRoof);
-      }
-
-      if (newDataKRoof.length > 0) {
-        this.loadedDatasets.set(name + ' (k_roof)', newDataKRoof);
-      }
-
-      if (newDataU.length > 0 || newDataK.length > 0 || newDataRoof.length > 0 || newDataKRoof.length > 0) {
+      if (newDataU.length > 0 || newDataK.length > 0) {
         this.onUpdateUI();
       }
     } catch (err) {
