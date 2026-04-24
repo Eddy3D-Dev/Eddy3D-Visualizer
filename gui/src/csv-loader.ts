@@ -138,12 +138,15 @@ export class CSVLoader {
                     newDataK.push({ x, y, z, val: kVal, h });
                 }
 
+                // Roof data points are placed at their actual height: Bldg_height + Z_relative
                 if (roofIdx !== -1 && !isNaN(roofVal)) {
-                    newDataRoof.push({ x, y, z, val: roofVal, h });
+                    const roofZ = (!isNaN(h) && h > 0) ? h + z : z;
+                    newDataRoof.push({ x, y, z: roofZ, val: roofVal, h });
                 }
 
                 if (kRoofIdx !== -1 && !isNaN(kRoofVal)) {
-                    newDataKRoof.push({ x, y, z, val: kRoofVal, h });
+                    const roofZ = (!isNaN(h) && h > 0) ? h + z : z;
+                    newDataKRoof.push({ x, y, z: roofZ, val: kRoofVal, h });
                 }
             }
         }

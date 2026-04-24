@@ -129,16 +129,19 @@ describe('CSVLoader', () => {
 
       const uData = loader.getDataset('roof_test.csv')!;
       expect(uData[0].val).toBe(4.0);
+      expect(uData[0].z).toBe(3); // pedestrian-level z stays unchanged
 
       const roofData = loader.getDataset('roof_test.csv (roof)')!;
       expect(roofData).toHaveLength(2);
       expect(roofData[0].val).toBe(1.18);
+      expect(roofData[0].z).toBe(14.5 + 3); // z = Bldg_height + Z_relative for buildings
       expect(roofData[1].val).toBe(0.0);
+      expect(roofData[1].z).toBe(7); // z stays at Z_relative when Bldg_height is 0
     });
 
-    it('detects k_roof column and creates a separate k_roof dataset', () => {
+    it('detects k_roof column and creates a separate k_roof dataset at roof height', () => {
       const { loader } = makeLoader();
-      const csv = 'x,y,z,mag_U,k,k_roof\n1,2,3,4.0,0.5,0.3';
+      const csv = 'x,y,z,mag_U,k,k_roof,Bldg_height\n1,2,3,4.0,0.5,0.3,10.0';
       loader.processCSVData(csv, 'k_roof_test.csv');
 
       expect(loader.hasDataset('k_roof_test.csv')).toBe(true);
@@ -148,9 +151,10 @@ describe('CSVLoader', () => {
 
       const kRoofData = loader.getDataset('k_roof_test.csv (k_roof)')!;
       expect(kRoofData[0].val).toBe(0.3);
+      expect(kRoofData[0].z).toBe(10.0 + 3); // z = Bldg_height + Z_relative
     });
 
-    it('handles full ML pipeline CSV with all columns', () => {
+    it('handles full ML pipeline CSV with all columns and correct roof z', () => {
       const { loader } = makeLoader();
       const csv = 'X,Y,Z_relative,SDF,Bldg_height,U_over_Uref,dir_sin,dir_cos,mag_U,k,mag_U_roof\n' +
         '-485.0,-54.5,1.8,-291.22,0.0,0.26,0.0,-1.0,0.0,0.0,0.0\n' +
@@ -164,11 +168,14 @@ describe('CSVLoader', () => {
 
       const uData = loader.getDataset('full_pipeline.csv')!;
       expect(uData).toHaveLength(2);
-      expect(uData[0].val).toBe(0.0);
+      expect(uData[0].z).toBe(1.8);   // pedestrian z unchanged
       expect(uData[0].h).toBe(0.0);
+      expect(uData[1].z).toBe(1.8);   // pedestrian z unchanged even with building
       expect(uData[1].h).toBe(14.57);
 
       const roofData = loader.getDataset('full_pipeline.csv (roof)')!;
+      expect(roofData[0].z).toBe(1.8);           // no building → stays at Z_relative
+      expect(roofData[1].z).toBeCloseTo(14.57 + 1.8); // building → Bldg_height + Z_relative
       expect(roofData[1].val).toBe(1.18);
     });
 
