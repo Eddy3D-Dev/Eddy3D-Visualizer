@@ -372,6 +372,8 @@ h1 {
 .toggle-label {
   cursor: pointer;
   flex-grow: 1;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 /* Range Input */
@@ -379,6 +381,8 @@ h1 {
   width: 100%;
   cursor: pointer;
   accent-color: var(--accent-color);
+  user-select: none;
+  touch-action: manipulation;
 }
 
 /* Switch Styles */
