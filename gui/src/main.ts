@@ -44,6 +44,12 @@ renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Accessibility: Make canvas focusable for keyboard controls (OrbitControls)
+renderer.domElement.tabIndex = 0;
+renderer.domElement.setAttribute('role', 'img');
+renderer.domElement.setAttribute('aria-label', 'Interactive 3D Scene');
+
 canvasContainer.appendChild(renderer.domElement);
 
 // Setup cameras
