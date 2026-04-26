@@ -16,3 +16,7 @@
 ## 2026-04-23 - Enhance Keyboard Shortcut Hints with Semantic kbd Tags
 **Learning:** Using semantic HTML `<kbd>` tags instead of generic presentation tags like `<strong>` for keyboard/mouse interaction hints provides better semantic meaning for assistive technologies. Additionally, styling these tags to look like physical keycaps improves visual scannability and gives the application a more polished, professional feel.
 **Action:** When displaying keyboard shortcuts or interaction hints, always use the `<kbd>` tag and apply a consistent, tactile CSS style (borders, border-radius, background, and subtle shadow) across the design system.
+
+## 2026-04-26 - Enable Keyboard Controls for Three.js Canvas
+**Learning:** Three.js `OrbitControls` supports keyboard interactions (like arrow keys for panning), but they are ignored by default because `<canvas>` elements are not natively focusable in the DOM. This breaks accessibility for keyboard users trying to interact with the 3D scene.
+**Action:** Always manually add `tabindex="0"` to the WebGL canvas element (`renderer.domElement`) and set appropriate ARIA attributes (like `role="img"` and `aria-label="Interactive 3D Scene"`) so screen readers can announce it when it receives focus.
