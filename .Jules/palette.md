@@ -24,3 +24,7 @@
 ## 2026-04-26 - Prevent Accidental Text Selection on Interactive Controls
 **Learning:** During rapid clicking or tapping on highly interactive form controls like toggle switches, sliders, dropdowns, and their associated labels, the browser's default behavior often triggers text highlighting or double-tap-to-zoom on mobile devices. This degrades the user experience, making the web application feel unresponsive and unlike a native app.
 **Action:** Always apply `user-select: none;` and `touch-action: manipulation;` to frequently toggled elements (`.switch`, `.range-input`, `<select>`, and `<label>` tags) to ensure a smooth, app-like interaction flow without visual interruptions.
+
+## 2026-05-15 - Provide Feedback on Invalid File Uploads
+**Learning:** Silently ignoring unsupported file types (like dragging a `.txt` file into an app expecting `.csv`) breaks user trust and leads them to assume the application is broken. Users need immediate, clear feedback when their action fails.
+**Action:** When handling file uploads or drag-and-drop interactions, always validate the file types and trigger an immediate visual error notification (like a toast) explaining why the files were rejected, rather than just silently discarding them.
