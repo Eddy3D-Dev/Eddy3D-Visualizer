@@ -187,12 +187,13 @@ export function updateResultsDropdown(
     select.innerHTML = '';
   }
 
-  datasetNames.forEach((key) => {
+  for (let i = 0; i < datasetNames.length; i++) {
+    const key = datasetNames[i];
     const option = document.createElement('option');
     option.value = key;
     option.text = key;
     select.appendChild(option);
-  });
+  }
 
   const isDisabled = datasetNames.length === 0;
   select.disabled = isDisabled;
