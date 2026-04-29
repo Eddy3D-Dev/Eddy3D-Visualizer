@@ -206,9 +206,12 @@ export function updateResultsDropdown(
 
 export function handleFileUpload(
   files: FileList | null,
-  processCSV: (text: string, name: string) => void
+  processCSV: (text: string, name: string) => void,
+  onError?: (msg: string) => void
 ) {
   if (!files) return;
+
+  const invalidFiles: string[] = [];
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -219,6 +222,16 @@ export function handleFileUpload(
         processCSV(text, file.name);
       };
       reader.readAsText(file);
+    } else {
+      invalidFiles.push(file.name);
+    }
+  }
+
+  if (invalidFiles.length > 0 && onError) {
+    if (invalidFiles.length === 1) {
+      onError(`Unsupported file type: "${invalidFiles[0]}". Please upload .csv files.`);
+    } else {
+      onError(`Unsupported file types: ${invalidFiles.length} files ignored. Please upload .csv files.`);
     }
   }
 }

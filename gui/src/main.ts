@@ -1014,7 +1014,7 @@ const handleFiles = (files: FileList | null) => {
       csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
-  });
+  }, (msg) => showToast(msg, true));
 };
 
 // Helper to clear input value after selection so the same file can be re-uploaded

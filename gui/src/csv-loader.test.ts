@@ -217,7 +217,7 @@ describe('handleFileUpload', () => {
     expect(cb).toHaveBeenCalledWith(csvContent, 'test.csv');
   });
 
-  it('ignores non-csv files', async () => {
+  it('ignores non-csv files and calls onError if provided', async () => {
     const file = new File(['hello'], 'readme.txt', { type: 'text/plain' });
     const fileList = {
       length: 1,
@@ -227,8 +227,28 @@ describe('handleFileUpload', () => {
     } as unknown as FileList;
 
     const cb = vi.fn();
-    handleFileUpload(fileList, cb);
+    const errCb = vi.fn();
+    handleFileUpload(fileList, cb, errCb);
     await new Promise((r) => setTimeout(r, 50));
     expect(cb).not.toHaveBeenCalled();
+    expect(errCb).toHaveBeenCalledWith('Unsupported file type: "readme.txt". Please upload .csv files.');
+  });
+
+  it('calls onError with multiple files message when multiple invalid files are uploaded', async () => {
+    const file1 = new File(['hello'], 'readme.txt', { type: 'text/plain' });
+    const file2 = new File(['world'], 'data.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const fileList = {
+      length: 2,
+      item: (i: number) => (i === 0 ? file1 : i === 1 ? file2 : null),
+      0: file1,
+      1: file2
+    } as unknown as FileList;
+
+    const cb = vi.fn();
+    const errCb = vi.fn();
+    handleFileUpload(fileList, cb, errCb);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(cb).not.toHaveBeenCalled();
+    expect(errCb).toHaveBeenCalledWith('Unsupported file types: 2 files ignored. Please upload .csv files.');
   });
 });
