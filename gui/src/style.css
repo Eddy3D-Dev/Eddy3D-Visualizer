@@ -685,7 +685,6 @@ input:checked+.slider:before {
 }
 
 .collapsible-header .icon {
-  font-size: 0.8rem;
   transition: transform 0.3s;
   color: var(--text-secondary);
 }
