@@ -120,7 +120,7 @@
           <div class="toggle-item disabled" id="point-size-control" style="flex-direction: column; align-items: flex-start;" title="Disable 'Gapless Points' to adjust manually">
             <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
               <label for="point-size">Point Size</label>
-              <output id="point-size-display" for="point-size" style="font-size: 0.8em; color: var(--text-secondary);">3.0</output>
+              <output id="point-size-display" for="point-size" style="font-size: 0.8em; color: var(--text-secondary);" aria-hidden="true">3.0</output>
             </div>
             <input type="range" id="point-size" min="0.1" max="10" value="3" step="0.1" class="range-input" disabled aria-label="Point Size" title="Disable 'Gapless Points' to adjust manually">
           </div>
@@ -147,21 +147,21 @@
           <h3 class="collapsible-heading">
             <button class="collapsible-header" id="advanced-toggle" type="button" aria-expanded="false" aria-controls="advanced-content" title="Show advanced settings">
               <span>Advanced</span>
-              <span class="icon" aria-hidden="true">▼</span>
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
           </h3>
           <div class="collapsible-content" id="advanced-content" role="region" aria-label="Advanced Settings" style="display: none;">
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the minimum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-min">Min Value</label>
-                <output id="min-val-display" for="colormap-min" style="font-size: 0.8em; color: var(--text-secondary);">0</output>
+                <output id="min-val-display" for="colormap-min" style="font-size: 0.8em; color: var(--text-secondary);" aria-hidden="true">0</output>
               </div>
               <input type="range" id="colormap-min" class="range-input" aria-label="Colormap Minimum Value">
             </div>
             <div class="toggle-item" style="flex-direction: column; align-items: flex-start;" title="Set the maximum value for the colormap scale">
               <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
                 <label for="colormap-max">Max Value</label>
-                <output id="max-val-display" for="colormap-max" style="font-size: 0.8em; color: var(--text-secondary);">1</output>
+                <output id="max-val-display" for="colormap-max" style="font-size: 0.8em; color: var(--text-secondary);" aria-hidden="true">1</output>
               </div>
               <input type="range" id="colormap-max" class="range-input" aria-label="Colormap Maximum Value">
             </div>

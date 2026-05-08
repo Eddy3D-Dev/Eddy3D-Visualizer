@@ -28,3 +28,7 @@
 ## 2026-05-15 - Provide Feedback on Invalid File Uploads
 **Learning:** Silently ignoring unsupported file types (like dragging a `.txt` file into an app expecting `.csv`) breaks user trust and leads them to assume the application is broken. Users need immediate, clear feedback when their action fails.
 **Action:** When handling file uploads or drag-and-drop interactions, always validate the file types and trigger an immediate visual error notification (like a toast) explaining why the files were rejected, rather than just silently discarding them.
+
+## 2026-05-08 - Prevent Screen Reader Spam on Range Sliders with Output Elements
+**Learning:** Using semantic `<output>` elements alongside `<input type="range">` is great for visual users, but because `<output>` has an implicit `role="status"` (an `aria-live="polite"` region), it can flood the screen reader's speech queue with every incremental change during dragging. Since native range inputs already announce their value changes to assistive technologies seamlessly, the output element causes annoying double-speaking and live region spam.
+**Action:** Always apply `aria-hidden="true"` to `<output>` elements that are used purely as visual companions to `<input type="range">` elements to keep the screen reader experience clean and responsive.
