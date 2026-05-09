@@ -32,3 +32,7 @@
 ## 2026-05-08 - Prevent Screen Reader Spam on Range Sliders with Output Elements
 **Learning:** Using semantic `<output>` elements alongside `<input type="range">` is great for visual users, but because `<output>` has an implicit `role="status"` (an `aria-live="polite"` region), it can flood the screen reader's speech queue with every incremental change during dragging. Since native range inputs already announce their value changes to assistive technologies seamlessly, the output element causes annoying double-speaking and live region spam.
 **Action:** Always apply `aria-hidden="true"` to `<output>` elements that are used purely as visual companions to `<input type="range">` elements to keep the screen reader experience clean and responsive.
+
+## 2026-06-15 - Ensure Toast Auto-Dismiss Timers Resume Properly
+**Learning:** It's good accessibility practice to pause auto-dismiss timers on toast notifications when a user hovers over or focuses on them, giving them more time to read. However, if you only pause the timer (`mouseenter` / `focusin`) but fail to resume it when the user leaves (`mouseleave` / `focusout`), the notification will stay on screen forever, cluttering the UI and confusing the user.
+**Action:** When implementing auto-dismissing notifications with a pause feature, always ensure the lifecycle is complete by providing matching event listeners to resume the timeout once interaction ceases.

@@ -506,11 +506,21 @@ export function showToast(message: string, isError = false) {
 
   container.appendChild(toast);
 
-  const timeoutId = setTimeout(removeToast, 4000);
+  let timeoutId = setTimeout(removeToast, 4000);
+
+  const pauseTimer = () => clearTimeout(timeoutId);
+  const resumeTimer = () => {
+    clearTimeout(timeoutId); // Ensure we don't start multiple timers
+    timeoutId = setTimeout(removeToast, 4000);
+  };
 
   // Pause timer on hover/focus for better accessibility
-  toast.addEventListener('mouseenter', () => clearTimeout(timeoutId));
-  toast.addEventListener('focusin', () => clearTimeout(timeoutId));
+  toast.addEventListener('mouseenter', pauseTimer);
+  toast.addEventListener('focusin', pauseTimer);
+
+  // Resume timer when interaction ceases
+  toast.addEventListener('mouseleave', resumeTimer);
+  toast.addEventListener('focusout', resumeTimer);
 }
 
 function updateEmptyStateUI() {
