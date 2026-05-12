@@ -457,10 +457,6 @@ input:checked+.slider:before {
   align-items: center;
 }
 
-#canvas-container:focus {
-  outline: none;
-}
-
 /* Palette: Explicit cursor feedback for draggable 3D canvas */
 #canvas-container canvas {
   cursor: grab;

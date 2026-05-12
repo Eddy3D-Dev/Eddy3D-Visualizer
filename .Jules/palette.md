@@ -36,3 +36,7 @@
 ## 2026-06-15 - Ensure Toast Auto-Dismiss Timers Resume Properly
 **Learning:** It's good accessibility practice to pause auto-dismiss timers on toast notifications when a user hovers over or focuses on them, giving them more time to read. However, if you only pause the timer (`mouseenter` / `focusin`) but fail to resume it when the user leaves (`mouseleave` / `focusout`), the notification will stay on screen forever, cluttering the UI and confusing the user.
 **Action:** When implementing auto-dismissing notifications with a pause feature, always ensure the lifecycle is complete by providing matching event listeners to resume the timeout once interaction ceases.
+
+## 2026-06-20 - Focus Interactive Canvas Directly
+**Learning:** When moving focus programmatically (like from a 'Skip to 3D Canvas' link or after closing an Empty State overlay), focusing a wrapper `<div>` containing a `<canvas>` forces keyboard users to press Tab an extra time before they can actually interact with the canvas (e.g. pan/rotate with arrow keys). Wrapper elements typically should not receive focus unless they are scrollable regions.
+**Action:** Always assign a unique ID directly to the focusable `<canvas>` element (e.g., `renderer.domElement`) and target it directly with skip links (`href="#webgl-canvas"`) or programmatic focus (`renderer.domElement.focus()`). Remove `tabindex` and `focus:outline-none` from the wrapper container.
