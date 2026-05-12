@@ -46,6 +46,7 @@ renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // Accessibility: Make canvas focusable for keyboard controls (OrbitControls)
+renderer.domElement.id = 'webgl-canvas';
 renderer.domElement.tabIndex = 0;
 renderer.domElement.setAttribute('role', 'img');
 renderer.domElement.setAttribute('aria-label', 'Interactive 3D Scene');
@@ -536,9 +537,9 @@ function updateEmptyStateUI() {
     if (hasData) {
       canvasContainer.classList.add('has-data');
 
-      // If focus was inside the empty state, move it to the canvas container to prevent focus drop to body
+      // If focus was inside the empty state, move it to the canvas itself to prevent focus drop to body and instantly enable keyboard controls
       if (emptyStateHasFocus) {
-        canvasContainer.focus();
+        renderer.domElement.focus();
       }
     } else {
       canvasContainer.classList.remove('has-data');
