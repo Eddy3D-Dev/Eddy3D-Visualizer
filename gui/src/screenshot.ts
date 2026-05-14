@@ -362,7 +362,15 @@ export async function captureAllScreenshots(
 
 export function updateDownloadButton(downloadBtn: HTMLButtonElement, datasetCount: number) {
   const isDisabled = datasetCount === 0;
-  downloadBtn.disabled = isDisabled;
+
+  if (isDisabled) {
+    downloadBtn.setAttribute('aria-disabled', 'true');
+    downloadBtn.removeAttribute('disabled');
+  } else {
+    downloadBtn.removeAttribute('aria-disabled');
+    downloadBtn.removeAttribute('disabled');
+  }
+
   downloadBtn.title = isDisabled
     ? 'Upload a dataset to enable downloads'
     : 'Download screenshots';
