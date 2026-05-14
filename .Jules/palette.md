@@ -40,3 +40,7 @@
 ## 2026-06-20 - Focus Interactive Canvas Directly
 **Learning:** When moving focus programmatically (like from a 'Skip to 3D Canvas' link or after closing an Empty State overlay), focusing a wrapper `<div>` containing a `<canvas>` forces keyboard users to press Tab an extra time before they can actually interact with the canvas (e.g. pan/rotate with arrow keys). Wrapper elements typically should not receive focus unless they are scrollable regions.
 **Action:** Always assign a unique ID directly to the focusable `<canvas>` element (e.g., `renderer.domElement`) and target it directly with skip links (`href="#webgl-canvas"`) or programmatic focus (`renderer.domElement.focus()`). Remove `tabindex` and `focus:outline-none` from the wrapper container.
+
+## 2026-06-25 - Make Disabled Buttons Discoverable for Keyboard Users
+**Learning:** Native `disabled` attributes completely remove elements from the focus order, making them invisible to keyboard-only and screen reader users. If a button has a helpful `title` explaining *why* it is disabled (e.g., "Upload a dataset to enable downloads"), these users will never be able to discover that information.
+**Action:** When a disabled button contains important contextual help via a tooltip (`title`), use `aria-disabled="true"` instead of the native `disabled` attribute. Ensure the CSS mimics the disabled visual state, and add a JavaScript guard clause (`if (btn.getAttribute('aria-disabled') === 'true') return;`) to prevent the action from firing.

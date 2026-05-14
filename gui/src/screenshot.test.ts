@@ -12,7 +12,8 @@ describe('updateDownloadButton', () => {
     const btn = makeBtn();
     updateDownloadButton(btn, 0);
 
-    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
+    expect(btn.disabled).toBe(false);
     expect(btn.title).toBe('Upload a dataset to enable downloads');
   });
 
@@ -20,6 +21,7 @@ describe('updateDownloadButton', () => {
     const btn = makeBtn();
     updateDownloadButton(btn, 3);
 
+    expect(btn.hasAttribute('aria-disabled')).toBe(false);
     expect(btn.disabled).toBe(false);
     expect(btn.title).toBe('Download screenshots');
   });
