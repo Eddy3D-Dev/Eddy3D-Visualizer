@@ -413,7 +413,8 @@ h1 {
   border-radius: 24px;
 }
 
-.switch:hover .slider {
+.switch:hover .slider,
+.toggle-item:hover .switch .slider {
   background-color: #cbd5e1;
 }
 
@@ -434,7 +435,8 @@ input:checked+.slider {
   background-color: #000000;
 }
 
-.switch:hover input:checked+.slider {
+.switch:hover input:checked+.slider,
+.toggle-item:hover .switch input:checked+.slider {
   background-color: #334155;
 }
 
@@ -723,11 +725,7 @@ input:checked+.slider:before {
 }
 
 .arrow-icon {
-  width: 0;
-  height: 0;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-left: 8px solid var(--text-primary);
+  color: var(--text-primary);
   transition: transform 0.3s ease;
 }
 

@@ -44,3 +44,7 @@
 ## 2026-06-25 - Make Disabled Buttons Discoverable for Keyboard Users
 **Learning:** Native `disabled` attributes completely remove elements from the focus order, making them invisible to keyboard-only and screen reader users. If a button has a helpful `title` explaining *why* it is disabled (e.g., "Upload a dataset to enable downloads"), these users will never be able to discover that information.
 **Action:** When a disabled button contains important contextual help via a tooltip (`title`), use `aria-disabled="true"` instead of the native `disabled` attribute. Ensure the CSS mimics the disabled visual state, and add a JavaScript guard clause (`if (btn.getAttribute('aria-disabled') === 'true') return;`) to prevent the action from firing.
+
+## 2024-07-26 - Unified Hover States for Row Controls
+**Learning:** When a toggle switch (or similar small control) is placed inside a full-width row alongside a text label, users naturally perceive the entire row as the clickable target. If only the switch itself reacts to hover, it breaks this mental model and makes the target feel smaller than it actually is.
+**Action:** Use CSS to trigger the control's visual hover state when the user hovers anywhere over the parent row (e.g., `.toggle-item:hover .switch .slider`). This visual feedback reinforces that clicking anywhere on the label or row will toggle the control.
