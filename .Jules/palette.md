@@ -48,3 +48,7 @@
 ## 2024-07-26 - Unified Hover States for Row Controls
 **Learning:** When a toggle switch (or similar small control) is placed inside a full-width row alongside a text label, users naturally perceive the entire row as the clickable target. If only the switch itself reacts to hover, it breaks this mental model and makes the target feel smaller than it actually is.
 **Action:** Use CSS to trigger the control's visual hover state when the user hovers anywhere over the parent row (e.g., `.toggle-item:hover .switch .slider`). This visual feedback reinforces that clicking anywhere on the label or row will toggle the control.
+
+## 2026-07-28 - Animate Accordions Safely with CSS Grid
+**Learning:** Animating the height of an accordion or collapsible section using `grid-template-rows: 0fr` to `1fr` is a modern, performant alternative to animating `max-height`. However, if you don't sequence the `visibility` property alongside it, the collapsed content remains focusable in the accessibility tree and keyboard tab order, creating a hidden focus trap.
+**Action:** When using CSS Grid for collapsible animations, pair the grid transition with a sequenced visibility transition. When closing, delay the visibility hide (e.g., `visibility 0s 0.3s`) so the animation can finish. When opening, transition visibility immediately (e.g., `visibility 0s 0s`). Make sure the inner container has `min-height: 0` and `overflow: hidden`.

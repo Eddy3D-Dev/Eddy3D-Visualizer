@@ -1163,8 +1163,8 @@ document.getElementById('colormap-max')?.addEventListener('input', updateRange);
 document.getElementById('advanced-toggle')?.addEventListener('click', function (this: HTMLElement) {
   const content = document.getElementById('advanced-content');
   if (content) {
-    const isHidden = content.style.display === 'none';
-    content.style.display = isHidden ? 'block' : 'none';
+    const isHidden = !content.classList.contains('open');
+    content.classList.toggle('open');
     this.classList.toggle('active', isHidden);
     this.setAttribute('aria-expanded', String(isHidden));
     this.setAttribute('title', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
