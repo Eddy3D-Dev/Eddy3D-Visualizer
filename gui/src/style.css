@@ -691,6 +691,25 @@ input:checked+.slider:before {
   transform: rotate(180deg);
 }
 
+.collapsible-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out, visibility 0s 0.3s;
+  visibility: hidden;
+}
+
+.collapsible-content.open {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease-out, visibility 0s 0s;
+  visibility: visible;
+}
+
+.collapsible-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding-top: 8px; /* Give some visual separation */
+}
+
 
 /* Menu Toggle Button (Arrow Bar) */
 /* Menu Toggle Button (Arrow Bar) */
