@@ -196,11 +196,11 @@ export async function captureAllScreenshots(
   originalHeight: number,
   originalPixelRatio: number
 ) {
-  const originalHTML = downloadBtn.innerHTML;
+  const textSpan = downloadBtn.querySelector('span');
+  const originalText = textSpan ? textSpan.textContent : '';
 
   // Get selected resolution (multiply by 10 to get actual pixels: 100->1000, 150->1500, 300->3000)
   const targetSize = parseInt(dpiSelect.value) * 10;
-  const textSpan = downloadBtn.querySelector('span');
 
   try {
     downloadBtn.classList.add('loading');
@@ -339,7 +339,7 @@ export async function captureAllScreenshots(
     if (textSpan) textSpan.textContent = '✓ Downloaded!';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.innerHTML = originalHTML;
+      if (textSpan) textSpan.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
     }, 2000);
 
@@ -354,7 +354,7 @@ export async function captureAllScreenshots(
     if (textSpan) textSpan.textContent = '✗ Failed';
     downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.innerHTML = originalHTML;
+      if (textSpan) textSpan.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
     }, 2000);
   }
