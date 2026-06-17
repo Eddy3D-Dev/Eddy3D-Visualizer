@@ -1201,10 +1201,13 @@ const closeSidebar = (returnFocus = false) => {
 // Close sidebar when clicking outside
 canvasContainer.addEventListener('click', () => closeSidebar(false));
 
-// Close sidebar on Escape key
+// Close sidebar on Escape key and handle R shortcut
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeSidebar(true);
+  } else if (e.key === 'r' || e.key === 'R') {
+    if (document.activeElement?.tagName === 'INPUT' && (document.activeElement as HTMLInputElement).type !== 'range') return;
+    zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
   }
 });
 
