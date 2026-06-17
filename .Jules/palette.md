@@ -56,3 +56,7 @@
 ## 2026-08-01 - Avoid InnerHTML for Text Updates on Elements with SVGs
 **Learning:** Using `element.innerHTML = originalHTML` to restore the state of a button (or other UI component) that contains embedded SVGs causes the browser to completely re-parse the SVG structure. This not only incurs unnecessary performance overhead but also frequently causes a micro layout shift (jank) or flicker, especially if the SVG relies on external CSS. It can also cause the element to lose any attached event listeners or active focus states.
 **Action:** When temporarily changing the text of an element (like a button switching to "Loading..."), target the specific text node or inner text wrapping `<span>`. Save `span.textContent`, and restore it directly via `span.textContent = originalText` rather than replacing the entire `innerHTML` of the parent button.
+
+## 2026-06-17 - Add Canvas View Reset Keyboard Shortcut
+**Learning:** Users can easily get "lost" when panning and zooming in 3D scenes if they move the camera far away from the data. While UI buttons exist for some actions, providing a quick keyboard shortcut to recenter the camera greatly improves UX for power users and those navigating primarily with keyboards.
+**Action:** When adding global keyboard shortcuts (like pressing 'R' to reset view), explicitly check if the user is typing in a text field (e.g., `document.activeElement?.tagName === 'INPUT'`) to prevent triggering the shortcut accidentally while they are naming a file or entering text.
