@@ -60,3 +60,7 @@
 ## 2026-06-17 - Add Canvas View Reset Keyboard Shortcut
 **Learning:** Users can easily get "lost" when panning and zooming in 3D scenes if they move the camera far away from the data. While UI buttons exist for some actions, providing a quick keyboard shortcut to recenter the camera greatly improves UX for power users and those navigating primarily with keyboards.
 **Action:** When adding global keyboard shortcuts (like pressing 'R' to reset view), explicitly check if the user is typing in a text field (e.g., `document.activeElement?.tagName === 'INPUT'`) to prevent triggering the shortcut accidentally while they are naming a file or entering text.
+
+## 2026-08-15 - Ensure Tooltips on Wrappers are Discoverable by Keyboard
+**Learning:** Placing descriptive tooltips (`title` attributes) on non-focusable wrapper elements (like `.toggle-item` `<div>`s or custom `<label>` buttons) works for mouse hover, but hides the context from keyboard-only and screen reader users. These users focus the inner interactive control (e.g., the hidden `<input>`), missing the wrapper's tooltip entirely.
+**Action:** Whenever a non-focusable wrapper has a `title` attribute to provide context, explicitly duplicate that `title` onto the inner focusable element (like the `<input>`, `<select>`, or `<button>`). This ensures assistive technologies correctly announce the description when the element receives focus.

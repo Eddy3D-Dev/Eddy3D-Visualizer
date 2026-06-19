@@ -36,12 +36,12 @@
               <label for="csv-upload" class="custom-file-upload" title="Upload individual CSV files">
                 <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                 Upload Files
-                <input type="file" id="csv-upload" accept=".csv" multiple class="sr-only">
+                <input type="file" id="csv-upload" accept=".csv" multiple class="sr-only" title="Upload individual CSV files">
               </label>
               <label for="folder-upload" class="custom-file-upload" title="Upload a folder of CSV files">
                 <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
                 Upload Folder
-                <input type="file" id="folder-upload" webkitdirectory directory multiple class="sr-only">
+                <input type="file" id="folder-upload" webkitdirectory directory multiple class="sr-only" title="Upload a folder of CSV files">
               </label>
             </div>
           </div>
@@ -73,49 +73,49 @@
           <div class="toggle-item" title="Switch to a top-down orthographic camera view">
             <label for="top-view" class="toggle-label">Top View</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="top-view" aria-label="Top View">
+              <input type="checkbox" role="switch" id="top-view" aria-label="Top View" title="Switch to a top-down orthographic camera view">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Automatically rotate the 3D scene">
             <label for="auto-rotate" class="toggle-label">Auto-rotate</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="auto-rotate" aria-label="Auto-rotate">
+              <input type="checkbox" role="switch" id="auto-rotate" aria-label="Auto-rotate" title="Automatically rotate the 3D scene">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Toggle between perspective and 2D orthographic camera">
             <label for="perspective-mode" class="toggle-label">Perspective Mode</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="perspective-mode" aria-label="Perspective Mode">
+              <input type="checkbox" role="switch" id="perspective-mode" aria-label="Perspective Mode" title="Toggle between perspective and 2D orthographic camera">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Show or hide the ground reference grid">
             <label for="grid" class="toggle-label">Grid</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="grid" aria-label="Grid">
+              <input type="checkbox" role="switch" id="grid" aria-label="Grid" title="Show or hide the ground reference grid">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Show or hide the 3D building context models">
             <label for="show-buildings" class="toggle-label">Show Buildings</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="show-buildings" checked aria-label="Show Buildings">
+              <input type="checkbox" role="switch" id="show-buildings" checked aria-label="Show Buildings" title="Show or hide the 3D building context models">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Show or hide the outlines of the building models">
             <label for="show-edges" class="toggle-label">Show Edges</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="show-edges" checked aria-label="Show Edges">
+              <input type="checkbox" role="switch" id="show-edges" checked aria-label="Show Edges" title="Show or hide the outlines of the building models">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Render points as a continuous surface without gaps between them">
             <label for="gapless-points" class="toggle-label">Gapless Points</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="gapless-points" checked aria-label="Gapless Points">
+              <input type="checkbox" role="switch" id="gapless-points" checked aria-label="Gapless Points" title="Render points as a continuous surface without gaps between them">
               <span class="slider"></span>
             </label>
           </div>
@@ -129,13 +129,13 @@
           <div class="toggle-item" title="Make individual points always face the camera (billboarding)">
             <label for="rotate-to-camera" class="toggle-label">Rotate To Camera</label>
             <label class="switch">
-              <input type="checkbox" role="switch" id="rotate-to-camera" aria-label="Rotate To Camera">
+              <input type="checkbox" role="switch" id="rotate-to-camera" aria-label="Rotate To Camera" title="Make individual points always face the camera (billboarding)">
               <span class="slider"></span>
             </label>
           </div>
           <div class="toggle-item" title="Select the color mapping for the values">
             <label for="colormap-select">Colormap</label>
-            <select id="colormap-select" aria-label="Colormap Selection" class="colormap-select">
+            <select id="colormap-select" aria-label="Colormap Selection" class="colormap-select" title="Select the color mapping for the values">
               <option value="turbo">Turbo</option>
               <option value="jet" selected>Jet</option>
               <option value="viridis">Viridis</option>
@@ -194,12 +194,12 @@
             <label for="empty-csv-upload" class="custom-file-upload" title="Upload individual CSV files">
               <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
               Upload Files
-              <input type="file" id="empty-csv-upload" accept=".csv" multiple class="sr-only">
+              <input type="file" id="empty-csv-upload" accept=".csv" multiple class="sr-only" title="Upload individual CSV files">
             </label>
             <label for="empty-folder-upload" class="custom-file-upload" title="Upload a folder of CSV files">
               <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
               Upload Folder
-              <input type="file" id="empty-folder-upload" webkitdirectory directory multiple class="sr-only">
+              <input type="file" id="empty-folder-upload" webkitdirectory directory multiple class="sr-only" title="Upload a folder of CSV files">
             </label>
           </div>
         </div>
