@@ -64,3 +64,11 @@
 ## 2026-08-15 - Ensure Tooltips on Wrappers are Discoverable by Keyboard
 **Learning:** Placing descriptive tooltips (`title` attributes) on non-focusable wrapper elements (like `.toggle-item` `<div>`s or custom `<label>` buttons) works for mouse hover, but hides the context from keyboard-only and screen reader users. These users focus the inner interactive control (e.g., the hidden `<input>`), missing the wrapper's tooltip entirely.
 **Action:** Whenever a non-focusable wrapper has a `title` attribute to provide context, explicitly duplicate that `title` onto the inner focusable element (like the `<input>`, `<select>`, or `<button>`). This ensures assistive technologies correctly announce the description when the element receives focus.
+
+## 2024-08-20 - Ensure Tooltips on Custom Inputs are Discoverable by Keyboard
+**Learning:** Custom UI inputs (like range sliders inside flex containers) might be visually clear to sighted users, but they lack context for keyboard-only and screen-reader users if the tooltip (`title` attribute) is only applied to the container or label.
+**Action:** Always ensure the `title` attribute is placed directly on the focusable interactive element (e.g., `<input type="range">`) to guarantee discoverability by assistive technologies.
+
+## 2024-08-20 - Add Non-Standard Keyboard Shortcut Instructions to Aria Labels
+**Learning:** For complex interactive components like WebGL canvases that support non-standard keyboard shortcuts (e.g., using arrow keys to pan, pressing R to reset), screen reader users are completely unaware of these interactions unless explicitly told.
+**Action:** When a focusable element (like `<canvas>`) has custom keyboard shortcuts, append instructions directly to the element's `aria-label` (e.g., '...Use arrow keys to pan, or press R to reset the view.') so they are announced upon focus.

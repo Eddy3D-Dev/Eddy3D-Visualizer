@@ -49,7 +49,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.id = 'webgl-canvas';
 renderer.domElement.tabIndex = 0;
 renderer.domElement.setAttribute('role', 'img');
-renderer.domElement.setAttribute('aria-label', 'Interactive 3D Scene');
+renderer.domElement.setAttribute('aria-label', 'Interactive 3D Scene. Use arrow keys to pan, or press R to reset the view.');
 
 canvasContainer.appendChild(renderer.domElement);
 
