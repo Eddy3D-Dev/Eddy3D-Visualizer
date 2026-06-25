@@ -1167,8 +1167,9 @@ document.getElementById('advanced-toggle')?.addEventListener('click', function (
     content.classList.toggle('open');
     this.classList.toggle('active', isHidden);
     this.setAttribute('aria-expanded', String(isHidden));
-    this.setAttribute('title', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
-    this.setAttribute('aria-label', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
+    const label = isHidden ? 'Hide advanced settings' : 'Show advanced settings';
+    this.setAttribute('title', label);
+    this.setAttribute('aria-label', label);
   }
 });
 

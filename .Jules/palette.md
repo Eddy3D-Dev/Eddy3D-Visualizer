@@ -72,3 +72,7 @@
 ## 2024-08-20 - Add Non-Standard Keyboard Shortcut Instructions to Aria Labels
 **Learning:** For complex interactive components like WebGL canvases that support non-standard keyboard shortcuts (e.g., using arrow keys to pan, pressing R to reset), screen reader users are completely unaware of these interactions unless explicitly told.
 **Action:** When a focusable element (like `<canvas>`) has custom keyboard shortcuts, append instructions directly to the element's `aria-label` (e.g., '...Use arrow keys to pan, or press R to reset the view.') so they are announced upon focus.
+
+## 2024-08-20 - Initialize Dynamic Accessibility Attributes in Static HTML
+**Learning:** When interactive elements (like a toggle button) have their `aria-label`, `aria-expanded`, or `title` updated dynamically via JavaScript *after* an interaction occurs, their initial state in the DOM can be poorly accessible if the static HTML lacks these attributes. Screen readers evaluating the page on initial load will miss the context.
+**Action:** Always provide the initial, correct accessibility attributes (e.g., `aria-label="Show advanced settings"`) directly within the static HTML template for any element whose properties are dynamically managed later.
