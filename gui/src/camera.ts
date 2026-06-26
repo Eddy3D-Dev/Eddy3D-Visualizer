@@ -34,7 +34,7 @@ export function setupCameras(
   let activeCamera: THREE.Camera = orthographicCamera;
 
   renderer.domElement.tabIndex = 0;
-  renderer.domElement.setAttribute('aria-label', 'Interactive 3D Canvas. Use arrow keys to pan and rotate, and press R to reset the view.');
+  renderer.domElement.setAttribute('aria-label', 'Interactive 3D Canvas. Use arrow keys to pan, and press R to reset the view.');
   renderer.domElement.setAttribute('role', 'img');
 
   const controls = new OrbitControls(activeCamera, renderer.domElement);

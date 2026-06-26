@@ -444,6 +444,17 @@ input:checked+.slider:before {
   transform: translateX(20px);
 }
 
+/* Palette: iOS-style tactile feedback for toggle switch */
+.switch:active .slider:before,
+.toggle-item:active .switch .slider:before {
+  width: 28px;
+}
+
+.switch:active input:checked+.slider:before,
+.toggle-item:active .switch input:checked+.slider:before {
+  transform: translateX(12px);
+}
+
 /* Keyboard Focus for Hidden Checkbox */
 .switch input:focus-visible + .slider {
   outline: 2px solid var(--text-primary);
@@ -540,6 +551,18 @@ input:checked+.slider:before {
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
   border: 1px dashed var(--border-color);
+  animation: empty-state-appear 0.4s ease-out;
+}
+
+@keyframes empty-state-appear {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .empty-state h2 {
