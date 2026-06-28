@@ -80,3 +80,7 @@
 ## 2024-08-20 - Add Tactile Feedback to Toggle Switches
 **Learning:** Standard CSS hover and active states (like background color changes) often feel flat. Adding slight scale or stretch animations on `:active` (when the user holds down the click/tap) provides a sense of physical weight and tactile feedback, making web controls feel more like native OS components.
 **Action:** Enhance toggle switches and similar controls with subtle dimension changes (e.g., stretching the slider thumb slightly horizontally) during the `:active` state to increase user satisfaction and perceived responsiveness.
+
+## 2024-08-20 - Prevent Flash of Drag-and-Drop Dropzones on Text Drag
+**Learning:** Attaching standard drag-and-drop event listeners (`dragover`, `dragenter`, etc.) to the `window` or `document` to create a global full-screen file dropzone can cause a jarring UX issue: if a user accidentally highlights text or clicks and drags a link anywhere on the page, the browser fires `dragover` events, instantly flashing the large "Drop files here" UI, disrupting their workflow.
+**Action:** Always validate the payload of the `DragEvent` early in the `dragover` and `dragenter` handlers by checking `e.dataTransfer.types.includes('Files')`. If it's not a file payload (e.g., text or URL), exit the handler immediately without preventing default behavior or showing the drop UI.

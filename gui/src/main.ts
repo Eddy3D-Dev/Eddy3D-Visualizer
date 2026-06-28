@@ -1043,17 +1043,21 @@ document.getElementById('empty-csv-upload')?.addEventListener('change', handleFi
 // Drag and Drop Logic
 let dragCounter = 0;
 window.addEventListener('dragover', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
   canvasContainer.classList.add('drag-over');
 });
 
 window.addEventListener('dragenter', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
   dragCounter++;
   canvasContainer.classList.add('drag-over');
 });
 
 window.addEventListener('dragleave', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
   dragCounter--;
   if (dragCounter === 0) {
