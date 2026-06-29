@@ -241,6 +241,8 @@ h1 {
   position: relative;
   pointer-events: none;
   padding-right: 36px;
+  background: linear-gradient(to right, #1d4ed8 var(--progress, 0%), #2563eb var(--progress, 0%));
+  transition: background 0.2s, opacity 0.2s, transform 0.1s;
 }
 
 .download-btn.loading::after {
