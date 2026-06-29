@@ -265,6 +265,8 @@ export async function captureAllScreenshots(
 
     for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
+      const progress = (i / total) * 100;
+      downloadBtn.style.setProperty('--progress', `${progress}%`);
       if (textSpan) textSpan.textContent = `Capturing ${i + 1}/${total}...`;
 
       if (pair.pred) {
@@ -325,6 +327,7 @@ export async function captureAllScreenshots(
       }
     }
 
+    downloadBtn.style.setProperty('--progress', `100%`);
     if (textSpan) textSpan.textContent = 'Creating ZIP...';
 
     // Generate and download ZIP
@@ -341,6 +344,7 @@ export async function captureAllScreenshots(
     setTimeout(() => {
       if (textSpan) textSpan.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
+      downloadBtn.style.removeProperty('--progress');
     }, 2000);
 
   } catch (error) {
@@ -356,6 +360,7 @@ export async function captureAllScreenshots(
     setTimeout(() => {
       if (textSpan) textSpan.textContent = originalText;
       downloadBtn.removeAttribute('aria-disabled');
+      downloadBtn.style.removeProperty('--progress');
     }, 2000);
   }
 }

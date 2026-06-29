@@ -84,3 +84,7 @@
 ## 2024-08-20 - Prevent Flash of Drag-and-Drop Dropzones on Text Drag
 **Learning:** Attaching standard drag-and-drop event listeners (`dragover`, `dragenter`, etc.) to the `window` or `document` to create a global full-screen file dropzone can cause a jarring UX issue: if a user accidentally highlights text or clicks and drags a link anywhere on the page, the browser fires `dragover` events, instantly flashing the large "Drop files here" UI, disrupting their workflow.
 **Action:** Always validate the payload of the `DragEvent` early in the `dragover` and `dragenter` handlers by checking `e.dataTransfer.types.includes('Files')`. If it's not a file payload (e.g., text or URL), exit the handler immediately without preventing default behavior or showing the drop UI.
+
+## 2026-08-25 - Use CSS Custom Properties for Inline Progress Bars
+**Learning:** When displaying progress for a long-running async task inside a button, updating DOM nodes or adding a separate progress bar element can clutter the UI or cause layout shifts. By dynamically updating an inline CSS custom property (e.g., `--progress`) and mapping it to a `linear-gradient` background in the CSS, we provide smooth, immediate visual feedback directly within the button itself with minimal code overhead.
+**Action:** Use CSS custom properties tied to `linear-gradient` backgrounds to visually indicate progress on buttons during async operations without requiring complex DOM manipulation.
