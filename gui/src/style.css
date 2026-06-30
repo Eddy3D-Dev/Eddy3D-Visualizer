@@ -330,8 +330,10 @@ h1 {
   width: calc(100% - 16px);
 }
 
-#point-size-control.disabled {
+#point-size-control.disabled,
+#point-size-control.disabled label {
   color: var(--text-secondary);
+  cursor: not-allowed;
 }
 
 #point-size-control input[type="range"]:disabled {

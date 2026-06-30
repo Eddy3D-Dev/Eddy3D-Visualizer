@@ -88,3 +88,7 @@
 ## 2026-08-25 - Use CSS Custom Properties for Inline Progress Bars
 **Learning:** When displaying progress for a long-running async task inside a button, updating DOM nodes or adding a separate progress bar element can clutter the UI or cause layout shifts. By dynamically updating an inline CSS custom property (e.g., `--progress`) and mapping it to a `linear-gradient` background in the CSS, we provide smooth, immediate visual feedback directly within the button itself with minimal code overhead.
 **Action:** Use CSS custom properties tied to `linear-gradient` backgrounds to visually indicate progress on buttons during async operations without requiring complex DOM manipulation.
+
+## 2024-08-27 - Apply `cursor: not-allowed` to Labels of Disabled Controls
+**Learning:** Native form controls with the `disabled` attribute often get browser-default `cursor: not-allowed` styling, but their associated `<label>` elements or wrapper containers do not. When a user hovers over the text label of a disabled control, they see a standard pointer or text cursor, which creates mixed signals about the element's interactivity.
+**Action:** Always explicitly apply `cursor: not-allowed` to the associated `<label>`, parent container, or any interactive sub-elements of a disabled form control. This ensures consistent visual feedback across the entire click target area.
