@@ -347,6 +347,18 @@ h1 {
   margin-top: 10px;
 }
 
+/* Palette: Explicit cursor feedback for form labels */
+.select-container label {
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.select-container:has(select:disabled) label {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* Results Dropdown */
 .results-select {
   width: 100%;
