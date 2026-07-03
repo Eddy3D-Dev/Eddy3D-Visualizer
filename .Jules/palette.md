@@ -95,3 +95,7 @@
 ## 2024-09-02 - Use CSS :has() for Contextual Label Styling
 **Learning:** Utilizing the CSS `:has()` pseudo-class allows for dynamic styling of associated labels or parent containers when a child form control is disabled (e.g., `.container:has(select:disabled) label`), eliminating the need for complex JavaScript state synchronization to maintain consistent UI feedback. Additionally, active labels often lack explicit `cursor: pointer` styling, making them feel non-interactive.
 **Action:** Use `:has()` to apply `cursor: not-allowed` and appropriate opacity to the labels of disabled controls to provide unified visual feedback across the entire interaction target. Always explicitly add `cursor: pointer` to active form labels to reinforce their clickability.
+
+## 2026-07-03 - Prevent Layout Jitter with Tabular Numbers
+**Learning:** When displaying dynamic numbers that update frequently upon user interaction (such as a live readout for a range slider), varying character widths in standard fonts cause the layout to jitter or shift continuously. This creates a visually distracting and unpolished experience.
+**Action:** Apply `font-variant-numeric: tabular-nums;` to any text element (like an `<output>`) that displays rapidly changing digits. This forces all numbers to use uniform widths, keeping the layout perfectly stable during updates.

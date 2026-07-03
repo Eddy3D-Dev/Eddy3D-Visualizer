@@ -392,6 +392,24 @@ h1 {
   touch-action: manipulation;
 }
 
+/* Range Slider Customizations */
+.range-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.range-header label {
+  cursor: pointer;
+}
+
+.range-output {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; /* Prevents layout jitter when numbers change */
+}
+
 /* Range Input */
 .range-input {
   width: 100%;
