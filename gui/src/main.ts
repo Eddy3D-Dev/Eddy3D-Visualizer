@@ -624,11 +624,19 @@ function renderDataset(name: string) {
     minSlider.max = sliderMax.toString();
     minSlider.step = step.toString();
     minSlider.value = "0";
+    minSlider.disabled = false;
+    minSlider.title = "Set the minimum value for the colormap scale";
+    const minWrapper = minSlider.closest('.toggle-item');
+    if (minWrapper) minWrapper.setAttribute('title', "Set the minimum value for the colormap scale");
 
     maxSlider.min = sliderMin.toString();
     maxSlider.max = sliderMax.toString();
     maxSlider.step = step.toString();
     maxSlider.value = "1";
+    maxSlider.disabled = false;
+    maxSlider.title = "Set the maximum value for the colormap scale";
+    const maxWrapper = maxSlider.closest('.toggle-item');
+    if (maxWrapper) maxWrapper.setAttribute('title', "Set the maximum value for the colormap scale");
 
     userMin = 0;
     userMax = 1;
