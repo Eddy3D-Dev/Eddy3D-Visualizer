@@ -336,10 +336,15 @@ h1 {
   cursor: not-allowed;
 }
 
-#point-size-control input[type="range"]:disabled {
+.range-input:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   filter: saturate(0);
+}
+
+.toggle-item:has(.range-input:disabled) label {
+  color: var(--text-secondary);
+  cursor: not-allowed;
 }
 
 /* Select Container */

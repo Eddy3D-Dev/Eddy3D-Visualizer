@@ -99,3 +99,7 @@
 ## 2026-07-03 - Prevent Layout Jitter with Tabular Numbers
 **Learning:** When displaying dynamic numbers that update frequently upon user interaction (such as a live readout for a range slider), varying character widths in standard fonts cause the layout to jitter or shift continuously. This creates a visually distracting and unpolished experience.
 **Action:** Apply `font-variant-numeric: tabular-nums;` to any text element (like an `<output>`) that displays rapidly changing digits. This forces all numbers to use uniform widths, keeping the layout perfectly stable during updates.
+
+## 2024-09-10 - Disable Data-Dependent Controls Until Data Loads
+**Learning:** When UI controls (like Min/Max range sliders) depend entirely on the loaded dataset, allowing users to interact with them before data is loaded results in a confusing experience, as the values will be immediately overwritten.
+**Action:** Always disable strictly data-dependent controls by default in the HTML, and provide an explanatory `title` (e.g., "Upload a dataset to adjust"). Enable them dynamically via JavaScript only after the data has successfully loaded and bounds are calculated.
