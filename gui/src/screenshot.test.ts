@@ -23,7 +23,7 @@ describe('updateDownloadButton', () => {
 
     expect(btn.hasAttribute('aria-disabled')).toBe(false);
     expect(btn.disabled).toBe(false);
-    expect(btn.title).toBe('Download screenshots');
+    expect(btn.title).toBe('Download screenshots for all datasets as a ZIP');
   });
 
   it('also toggles the dpi-select element if present', () => {

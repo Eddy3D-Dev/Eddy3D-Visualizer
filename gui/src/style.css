@@ -173,7 +173,7 @@ h1 {
   gap: 6px;
   background-color: #000000;
   color: white;
-  padding: 10px 16px;
+  padding: 10px 8px;
   cursor: pointer;
   border-radius: 4px;
   font-family: var(--font-main);
@@ -204,7 +204,7 @@ h1 {
   gap: 6px;
   background-color: #2563eb; /* Palette: Improved color contrast for better readability */
   color: white;
-  padding: 10px 16px;
+  padding: 10px 8px;
   cursor: pointer;
   border-radius: 4px;
   font-family: var(--font-main);
