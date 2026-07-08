@@ -103,3 +103,7 @@
 ## 2024-09-10 - Disable Data-Dependent Controls Until Data Loads
 **Learning:** When UI controls (like Min/Max range sliders) depend entirely on the loaded dataset, allowing users to interact with them before data is loaded results in a confusing experience, as the values will be immediately overwritten.
 **Action:** Always disable strictly data-dependent controls by default in the HTML, and provide an explanatory `title` (e.g., "Upload a dataset to adjust"). Enable them dynamically via JavaScript only after the data has successfully loaded and bounds are calculated.
+
+## 2024-10-25 - Improve Batch Action Transparency
+**Learning:** When a button triggers a batch action (like downloading multiple files) rather than a single action, users can feel hesitant if the scope isn't explicitly clear. A generic "Download" label on a UI that manages multiple datasets doesn't communicate whether it downloads the currently viewed dataset or all of them.
+**Action:** Dynamically update the button text and tooltip to include the batch scope and count (e.g., "Download All (5)") when multiple items are loaded. This clarifies the action, sets correct expectations, and serves as a passive confirmation that the user's bulk upload was successful.

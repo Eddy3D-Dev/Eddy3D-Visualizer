@@ -378,7 +378,18 @@ export function updateDownloadButton(downloadBtn: HTMLButtonElement, datasetCoun
 
   downloadBtn.title = isDisabled
     ? 'Upload a dataset to enable downloads'
-    : 'Download screenshots';
+    : datasetCount > 1
+      ? 'Download screenshots for all datasets as a ZIP'
+      : 'Download screenshots';
+
+  const textSpan = downloadBtn.querySelector('span');
+  if (textSpan) {
+    if (datasetCount > 1) {
+      textSpan.textContent = `All (${datasetCount})`;
+    } else {
+      textSpan.textContent = 'Download';
+    }
+  }
 
   const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement | null;
   if (dpiSelect) {
