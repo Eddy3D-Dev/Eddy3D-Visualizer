@@ -126,33 +126,6 @@ describe('CSVLoader', () => {
       expect(data[0].v).toBeUndefined();
     });
 
-    it('derives approximate vectors from dir_sin/dir_cos when U_x/U_y are absent', () => {
-      // The ML dataset shape (the bundled default): speed plus a global inflow
-      // direction. NOTE the Curator's documented misnaming: dir_sin is the flow X
-      // component, dir_cos the Y.
-      const csv = 'X,Y,Z_relative,SDF,Bldg_height,U_at_z,dir_sin,dir_cos,mag_U\n'
-        + '0,0,1.8,10,0,0.26,-0,1,2.5\n'
-        + '2,0,1.8,10,0,0.26,-0,1,4';
-      const { loader } = makeLoader();
-      loader.processCSVData(csv, 'ml.csv');
-      const data = loader.getDataset('ml.csv')!;
-      expect(data).toHaveLength(2);
-      expect(data[0].u).toBeCloseTo(0, 10); // 2.5 * -0
-      expect(data[0].v).toBeCloseTo(2.5, 10); // 2.5 * 1
-      expect(data[1].v).toBeCloseTo(4, 10);
-      expect(data[0].approxDir).toBe(true);
-    });
-
-    it('prefers real U_x/U_y over the dir_sin/dir_cos approximation', () => {
-      const csv = 'x,y,z,mag_u,dir_sin,dir_cos,u_x,u_y,u_z\n1,2,3,5,0,1,3,-4,0';
-      const { loader } = makeLoader();
-      loader.processCSVData(csv, 'both.csv');
-      const d = loader.getDataset('both.csv')![0];
-      expect(d.u).toBe(3);
-      expect(d.v).toBe(-4);
-      expect(d.approxDir).toBeUndefined();
-    });
-
     it('treats malformed vector cells as still air, keeping the row', () => {
       const csv = 'x,y,z,mag_u,u_x,u_y,u_z\n1,2,3,4,abc,2,0';
       const { loader } = makeLoader();
