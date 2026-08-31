@@ -627,8 +627,8 @@ function renderDataset(name: string) {
 
   // Calculate Min/Max for this dataset
   let referenceData = data;
-  if (name.toLowerCase().endsWith('_pred.csv')) {
-    const refName = name.replace(/_pred\.csv$/i, '.csv');
+  if (name.toLowerCase().includes('_pred.csv')) {
+    const refName = name.replace(/_pred\.csv/i, '.csv');
     if (csvLoader.hasDataset(refName)) {
       referenceData = csvLoader.getDataset(refName)!;
       console.log(`Using reference range from: ${refName}`);

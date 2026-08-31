@@ -55,13 +55,13 @@ export class CSVLoader {
       const xIdx = header.findIndex(h => h.toLowerCase() === 'x');
       const yIdx = header.findIndex(h => h.toLowerCase() === 'y');
       const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
-      const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
+      // Match velocity column exactly — avoid includes() which would falsely match mag_u_roof
+      const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u');
+      const kIdx = header.findIndex(h => h.toLowerCase() === 'k');
       const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height'));
-      // Optional velocity components (the Export to Visualizer component writes U_x/U_y/U_z);
-      // they feed the particle-flow overlay and are simply absent in older exports.
-      const uIdx = header.findIndex(h => h.toLowerCase() === 'u_x');
-      const vIdx = header.findIndex(h => h.toLowerCase() === 'u_y');
-      const wIdx = header.findIndex(h => h.toLowerCase() === 'u_z');
+      // Roof-level value columns
+      const roofIdx = header.findIndex(h => h.toLowerCase() === 'mag_u_roof');
+      const kRoofIdx = header.findIndex(h => h.toLowerCase() === 'k_roof');
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
@@ -69,10 +69,10 @@ export class CSVLoader {
         return;
       }
 
-      const newData: SensorDataPoint[] = [];
-      // ⚡ Bolt Optimization: include hIdx in maxIdx to ensure we parse height if present
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, uIdx, vIdx, wIdx);
-      const hasVectors = uIdx !== -1 && vIdx !== -1;
+      const newDataU: SensorDataPoint[] = [];
+      const newDataK: SensorDataPoint[] = [];
+      // ⚡ Bolt Optimization: include all known column indices in maxIdx to ensure we parse all present columns
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx, roofIdx, kRoofIdx);
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -96,10 +96,12 @@ export class CSVLoader {
             let currentPos = lineStart;
             let colIdx = 0;
             let x = NaN, y = NaN, z = NaN;
-            // Default val/h to 0 if column not in header, else NaN (expecting value)
+            // Default val/k/h/roof to 0 if column not in header, else NaN (expecting value)
             let val = valIdx !== -1 ? NaN : 0;
+            let kVal = kIdx !== -1 ? NaN : 0;
             let h = hIdx !== -1 ? NaN : 0;
-            let u = 0, v = 0, w = 0;
+            let roofVal = roofIdx !== -1 ? NaN : 0;
+            let kRoofVal = kRoofIdx !== -1 ? NaN : 0;
 
             while (currentPos <= contentEnd) {
                 let nextComma = text.indexOf(',', currentPos);
@@ -114,14 +116,14 @@ export class CSVLoader {
                     z = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === valIdx) {
                     val = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === kIdx) {
+                    kVal = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === hIdx) {
                     h = parseFloat(text.substring(currentPos, nextComma));
-                } else if (colIdx === uIdx) {
-                    u = parseFloat(text.substring(currentPos, nextComma));
-                } else if (colIdx === vIdx) {
-                    v = parseFloat(text.substring(currentPos, nextComma));
-                } else if (colIdx === wIdx) {
-                    w = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === roofIdx) {
+                    roofVal = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === kRoofIdx) {
+                    kRoofVal = parseFloat(text.substring(currentPos, nextComma));
                 }
 
                 // Stop if we passed the last column we need
@@ -132,18 +134,27 @@ export class CSVLoader {
                 colIdx++;
             }
 
-            if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-                if (hasVectors) {
-                    // A malformed cell parses NaN — treat as still air, matching the loader's
-                    // tolerance for the scalar columns.
-                    newData.push({
-                        x, y, z, val, h,
-                        u: isNaN(u) ? 0 : u,
-                        v: isNaN(v) ? 0 : v,
-                        w: isNaN(w) ? 0 : w,
-                    });
-                } else {
-                    newData.push({ x, y, z, val, h });
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                if (valIdx !== -1 && !isNaN(val)) {
+                    newDataU.push({ x, y, z, val, h });
+                } else if (valIdx === -1 && !isNaN(val)) {
+                    // Fallback for when no u column is found but x,y,z are valid
+                    newDataU.push({ x, y, z, val, h });
+                }
+
+                if (kIdx !== -1 && !isNaN(kVal)) {
+                    newDataK.push({ x, y, z, val: kVal, h });
+                }
+
+                // Merge roof data into the main datasets at actual roof height
+                if (roofIdx !== -1 && !isNaN(roofVal) && !isNaN(h) && h > 0) {
+                    const roofZ = h + z;
+                    newDataU.push({ x, y, z: roofZ, val: roofVal, h });
+                }
+
+                if (kRoofIdx !== -1 && !isNaN(kRoofVal) && !isNaN(h) && h > 0) {
+                    const roofZ = h + z;
+                    newDataK.push({ x, y, z: roofZ, val: kRoofVal, h });
                 }
             }
         }
@@ -151,8 +162,15 @@ export class CSVLoader {
         lineStart = lineEnd + 1;
       }
 
-      if (newData.length > 0) {
-        this.loadedDatasets.set(name, newData);
+      if (newDataU.length > 0) {
+        this.loadedDatasets.set(name, newDataU);
+      }
+      
+      if (newDataK.length > 0) {
+        this.loadedDatasets.set(name + ' (k)', newDataK);
+      }
+
+      if (newDataU.length > 0 || newDataK.length > 0) {
         this.onUpdateUI();
       }
     } catch (err) {
