@@ -15,7 +15,13 @@ if (versionBadge) {
 }
 import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
-import { buildVelocityGrid, createParticleFlow, datasetHasVectors, type ParticleFlow } from './particles';
+import {
+  buildVelocityGrid,
+  createParticleFlow,
+  datasetHasVectors,
+  type ParticleFlow,
+  type VelocityGrid,
+} from './particles';
 import { createGpuParticleFlow } from './particles-gpu';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
 import { 
@@ -66,7 +72,17 @@ let fixedSensorPoints: THREE.InstancedMesh | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
 let particleFlow: ParticleFlow | null = null;
-let particlesEnabled = false;
+/**
+ * What the USER asked for, which is not the same as what the active dataset can do.
+ * Kept separate so a dataset that cannot support particles disables the control without
+ * destroying the choice, and so the choice — not the momentarily-unchecked checkbox — is
+ * what gets persisted.
+ */
+let particlesRequested = false;
+/** The active dataset's flow field, or null when it has none. Built once per dataset. */
+let activeVelocityGrid: VelocityGrid | null = null;
+/** Particles run only when the user asked AND the dataset can carry them. */
+const particlesActive = () => particlesRequested && activeVelocityGrid !== null;
 const particleClock = new THREE.Clock();
 let activeSensorData: SensorDataPoint[] = [];
 let dataMin = 0;
@@ -300,7 +316,10 @@ function persistViewSettings() {
     gaplessPoints: gaplessToggle?.checked ?? true,
     rotateToCamera: rotateToCameraToggle?.checked ?? false,
     colormap: savedColormap,
-    particles: (document.getElementById('particles') as HTMLInputElement | null)?.checked ?? false,
+    // The request, NOT the live checkbox: the checkbox is unchecked while a dataset that
+    // cannot support particles is displayed, and persisting that would let any unrelated
+    // control change silently discard the user's setting.
+    particles: particlesRequested,
     flowSpeed: getFlowSpeedMultiplier()
   };
 
@@ -416,10 +435,10 @@ function applyPersistedViewSettings() {
     updatePointSizeDisplay(DEFAULT_POINT_SIZE);
   }
 
-  const particlesToggle = document.getElementById('particles') as HTMLInputElement | null;
-  if (particlesToggle && typeof saved.particles === 'boolean') {
-    particlesToggle.checked = saved.particles;
-    particlesEnabled = saved.particles;
+  if (typeof saved.particles === 'boolean') {
+    // Into the REQUEST; updateParticleControls decides whether the active dataset can
+    // honour it and sets the checkbox accordingly.
+    particlesRequested = saved.particles;
   }
   const flowSpeedSlider = document.getElementById('flow-speed') as HTMLInputElement | null;
   if (flowSpeedSlider && typeof saved.flowSpeed === 'number' && Number.isFinite(saved.flowSpeed)) {
@@ -981,26 +1000,59 @@ function updateSensorColors(mapName: ColormapName) {
 
 // --- Particle flow (animated wind particles over the velocity field) ---
 
-/** Enable the Particles toggle only when the dataset carries U_x/U_y columns. */
+/**
+ * Whether particles CAN run on the active dataset, and why not when they cannot.
+ *
+ * Carrying U_x/U_y is necessary but not sufficient: buildVelocityGrid also refuses a
+ * single probe transect (it needs two rows to interpolate across), a dataset whose
+ * sampled cells all sit inside building footprints, and a field that averages to a dead
+ * stop. Gating the toggle on the vectors alone left it switched ON with nothing drawn
+ * and nothing said — the same "quietly degraded looks exactly like working" state the
+ * GPU/CPU badge exists to prevent, one step earlier.
+ */
+function describeParticleSupport(): { grid: VelocityGrid | null; reason: string } {
+  if (activeSensorData.length === 0) return { grid: null, reason: 'Upload a dataset first' };
+  if (!datasetHasVectors(activeSensorData)) {
+    return {
+      grid: null,
+      reason: 'Animate wind particles through the velocity field (needs a CSV with U_x/U_y '
+        + 'columns — re-export with the current Export to Visualizer component)',
+    };
+  }
+  const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
+  if (!grid) {
+    return {
+      grid: null,
+      reason: 'This dataset has velocity vectors but no usable flow field — the points do not '
+        + 'form a grid at least two rows deep, or every sampled cell is inside a building.',
+    };
+  }
+  return { grid, reason: 'Animate wind particles through the velocity field' };
+}
+
+/**
+ * Re-derives the control state for the active dataset. The user's REQUEST
+ * (`particlesRequested`) survives a dataset that cannot honour it: the checkbox is
+ * rebuilt from the request each time, so switching to a legacy CSV and back restores the
+ * animation instead of silently discarding the choice — and, because the request rather
+ * than the live checkbox is what gets persisted, an unrelated control change while a
+ * legacy CSV is displayed no longer overwrites it.
+ */
 function updateParticleControls() {
   const control = document.getElementById('particles-control');
   const toggle = document.getElementById('particles') as HTMLInputElement | null;
-  const hasVectors = activeSensorData.length > 0 && datasetHasVectors(activeSensorData);
+  const { grid, reason } = describeParticleSupport();
+  activeVelocityGrid = grid;
+  const supported = grid !== null;
 
   if (toggle) {
-    toggle.disabled = !hasVectors;
-    if (!hasVectors) {
-      toggle.checked = false;
-      particlesEnabled = false;
-    }
+    toggle.disabled = !supported;
+    toggle.checked = supported && particlesRequested;
   }
   if (control) {
-    control.classList.toggle('disabled', !hasVectors);
-    const title = hasVectors
-      ? 'Animate wind particles through the velocity field'
-      : 'Animate wind particles through the velocity field (needs a CSV with U_x/U_y columns — re-export with the current Export to Visualizer component)';
-    control.setAttribute('title', title);
-    toggle?.setAttribute('title', title);
+    control.classList.toggle('disabled', !supported);
+    control.setAttribute('title', reason);
+    toggle?.setAttribute('title', reason);
   }
   updateFlowSpeedControlState();
 }
@@ -1008,7 +1060,7 @@ function updateParticleControls() {
 function updateFlowSpeedControlState() {
   const control = document.getElementById('flow-speed-control');
   const slider = document.getElementById('flow-speed') as HTMLInputElement | null;
-  const active = particlesEnabled;
+  const active = particlesActive();
   if (slider) slider.disabled = !active;
   if (control) {
     control.classList.toggle('disabled', !active);
@@ -1036,10 +1088,10 @@ function rebuildParticleFlow() {
     particleFlow = null;
   }
   updateParticleBackendLabel(null);
-  if (!particlesEnabled || activeSensorData.length === 0) return;
-
-  const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
-  if (!grid) return;
+  // The grid was already built (and its absence already explained on the control) by
+  // updateParticleControls, so there is no second, silent refusal hiding here.
+  const grid = activeVelocityGrid;
+  if (!particlesActive() || !grid) return;
 
   particleFlow = createGpuParticleFlow(grid, renderer) ?? createParticleFlow(grid);
   scene.add(particleFlow.object);
@@ -1121,7 +1173,7 @@ document.getElementById('results-select')?.addEventListener('change', (e) => {
 });
 
 document.getElementById('particles')?.addEventListener('change', (e) => {
-  particlesEnabled = (e.target as HTMLInputElement).checked;
+  particlesRequested = (e.target as HTMLInputElement).checked;
   updateFlowSpeedControlState();
   rebuildParticleFlow();
   persistViewSettings();

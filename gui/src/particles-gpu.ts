@@ -39,6 +39,13 @@ uniform vec2 uOrigin;
 uniform float uStep;
 
 bool eddy3dSampleField(vec2 world, out vec2 vel) {
+  // Written FIRST, not just on the success path. An 'out' parameter is not copied in on
+  // entry and IS copied out on return (GLSL ES 3.00 6.1.1), so returning false without
+  // assigning it overwrites the caller's own initializer with an undefined temp — the
+  // 'vec2 vel = vec2(0.0)' at the call site reads like a fallback but is destroyed.
+  // Measured: a caller's (777, -777) sentinel came back as (0, 0) on ANGLE/Metal, i.e.
+  // the zero came from the driver, not from the code.
+  vel = vec2(0.0);
   vec2 f = (world - uOrigin) / uStep;
   vec2 i0 = floor(f);
   vec2 t = f - i0;
@@ -72,8 +79,18 @@ uniform float uSeed;
 
 ${FIELD_SAMPLER_GLSL}
 
+// The dot product is range-reduced BEFORE sin(). Without the mod, uSeed drives the
+// argument to ~2.2e6, where float32 spacing plus the driver's own range reduction
+// quantize sin() to a handful of outputs: measured on ANGLE/Metal at the shipped density,
+// distinct hash values across the texture fell 878 -> 215 -> 33 -> 17 over frames
+// 1/600/3600/8191, and since the spawn cell, the jitter and the lifetime are all this
+// hash with constant offsets, particles respawned superimposed, in lockstep, on 17
+// positions — exactly the clumping the respawn exists to avoid. With the reduction the
+// count is flat at ~2100 regardless of frame. Same fix three's own common-chunk rand()
+// uses.
 float eddy3dHash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  highp float d = mod(dot(p, vec2(127.1, 311.7)), 3.14159265);
+  return fract(sin(d) * 43758.5453123);
 }
 
 // One random fluid cell, jittered inside it — the GPU twin of the CPU respawn's
@@ -117,14 +134,18 @@ uniform sampler2D uPositions;
 uniform float uZ;
 uniform float uSize;
 uniform float uScale;
+uniform float uPixelRatio;
 attribute vec2 reference;
 
 void main() {
   vec4 p = texture2D(uPositions, reference);
   vec4 mv = modelViewMatrix * vec4(p.x, p.y, uZ, 1.0);
-  gl_PointSize = uSize;
-  // Match THREE.PointsMaterial's sizeAttenuation, including its no-op under an
-  // orthographic camera — this app has a 2D mode and would otherwise draw 0-size points.
+  // Exactly THREE.PointsMaterial's own arithmetic: size * pixelRatio, then the
+  // attenuation only under a perspective camera (three's 'scale' uniform is HALF THE CSS
+  // HEIGHT, not half the drawing buffer). Folding the ratio into uScale instead would
+  // agree under perspective and draw devicePixelRatio times too small in this app's
+  // orthographic 2D mode, where the attenuation term never runs.
+  gl_PointSize = uSize * uPixelRatio;
   if (isPerspectiveMatrix(projectionMatrix)) gl_PointSize *= uScale / -mv.z;
   gl_Position = projectionMatrix * mv;
 }
@@ -283,6 +304,7 @@ export function createGpuParticleFlow(
       uZ: { value: grid.z },
       uSize: { value: grid.step * 0.4 },
       uScale: { value: 300 },
+      uPixelRatio: { value: renderer.getPixelRatio() },
       uColor: { value: new THREE.Color(0xffffff) },
       uOpacity: { value: 0.95 },
     },
@@ -335,6 +357,7 @@ export function createGpuParticleFlow(
   group.add(heads);
 
   let frame = 0;
+  const _size = new THREE.Vector2();
 
   return {
     object: group,
@@ -354,9 +377,12 @@ export function createGpuParticleFlow(
       headMat.uniforms.uPositions.value = positions;
       trailMat.uniforms.uPositions.value = positions;
       trailMat.uniforms.uSpeedFactor.value = factor;
-      // three sizes attenuated points against half the drawing-buffer height; read it
-      // every step so a resized window does not change the apparent particle size.
-      headMat.uniforms.uScale.value = renderer.getContext().drawingBufferHeight * 0.5;
+      // three sizes attenuated points against half the CSS height (not the drawing
+      // buffer), with the pixel ratio applied separately. Read both every step so a
+      // resized window or a move to a different-DPI display keeps the apparent size.
+      renderer.getSize(_size);
+      headMat.uniforms.uScale.value = _size.y * 0.5;
+      headMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
     },
     dispose(): void {
       compute.dispose();

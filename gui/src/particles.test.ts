@@ -128,6 +128,34 @@ describe('sampleVelocity', () => {
   });
 });
 
+// ── the two predicates are NOT interchangeable ───────────────────────────────
+
+describe('datasetHasVectors vs buildVelocityGrid', () => {
+  it('diverges: a dataset can carry real vectors and still have no usable field', () => {
+    // This gap is why the UI must gate the Particles control on the GRID, not on the
+    // vectors. Gating on datasetHasVectors alone left the toggle switched ON, the flow
+    // speed slider enabled, and nothing drawn or said — the exact "quietly degraded is
+    // indistinguishable from working" state the backend badge exists to prevent.
+
+    // A single probe transect: real wind, but one row deep, so nothing to interpolate across.
+    const transect: SensorDataPoint[] = [];
+    for (let ix = 0; ix < 60; ix++)
+      transect.push({ x: ix * 2, y: 0, z: 1.5, val: 3.2, h: 0, u: 3, v: 1, w: 0 });
+    expect(datasetHasVectors(transect)).toBe(true);
+    expect(buildVelocityGrid(transect, 2)).toBeNull();
+
+    // Every sampled cell inside a building: vectors present, no fluid cell to fly in.
+    const roofs = uniformField(5, 5, 2, 3, 1).map((p) => ({ ...p, h: 12 }));
+    expect(datasetHasVectors(roofs)).toBe(true);
+    expect(buildVelocityGrid(roofs, 2)).toBeNull();
+
+    // The control: an ordinary grid satisfies both, so the fixture can tell them apart.
+    const ok = uniformField(5, 5, 2, 3, 1);
+    expect(datasetHasVectors(ok)).toBe(true);
+    expect(buildVelocityGrid(ok, 2)).not.toBeNull();
+  });
+});
+
 // ── GPU packing (the data the GPGPU backend uploads) ─────────────────────────
 
 describe('packVelocityField', () => {
