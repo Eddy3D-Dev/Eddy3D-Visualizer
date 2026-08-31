@@ -388,9 +388,9 @@ export function createParticleFlow(grid: VelocityGrid): ParticleFlow {
   trailPos.setUsage(THREE.DynamicDrawUsage);
   trailGeo.setAttribute('position', trailPos);
   const trailMat = new THREE.LineBasicMaterial({
-    color: 0x10151c,
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.5,
+    opacity: 0.55,
     depthWrite: false,
   });
   const trails = new THREE.LineSegments(trailGeo, trailMat);
