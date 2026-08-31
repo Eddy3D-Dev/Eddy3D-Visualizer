@@ -1027,6 +1027,15 @@ function describeParticleSupport(): { grid: VelocityGrid | null; reason: string 
         + 'form a grid at least two rows deep, or every sampled cell is inside a building.',
     };
   }
+  // ML datasets (the bundled default included) carry no local vectors; the loader
+  // approximated them from the case's inflow direction. Working, but honest about it.
+  if (activeSensorData[0]?.approxDir) {
+    return {
+      grid,
+      reason: 'Animate wind particles — direction APPROXIMATED from the case\'s inflow '
+        + '(this dataset carries speed only; export with U_x/U_y for the true local flow)',
+    };
+  }
   return { grid, reason: 'Animate wind particles through the velocity field' };
 }
 

@@ -11,6 +11,10 @@ export interface SensorDataPoint {
   u?: number;
   v?: number;
   w?: number;
+  /** True when u/v were APPROXIMATED as mag_U times the case's global inflow direction
+   *  (ML datasets carry dir_sin/dir_cos but no local vectors) — the overlay then shows
+   *  the inflow everywhere rather than the deflected local flow, and says so. */
+  approxDir?: boolean;
 }
 
 export class CSVLoader {
@@ -62,6 +66,14 @@ export class CSVLoader {
       const uIdx = header.findIndex(h => h.toLowerCase() === 'u_x');
       const vIdx = header.findIndex(h => h.toLowerCase() === 'u_y');
       const wIdx = header.findIndex(h => h.toLowerCase() === 'u_z');
+      // ML datasets (the bundled default included) carry no local vectors, but they do
+      // carry the case's inflow direction as dir_sin/dir_cos — and DESPITE the names,
+      // Eddy3D's Dataset Curator documents dir_sin as the flow X component and dir_cos
+      // as the flow Y component. When no real U_x/U_y exists, u = mag * dir_sin and
+      // v = mag * dir_cos give an APPROXIMATE field (the inflow direction everywhere,
+      // scaled by the local speed) so the particle overlay still works on these files.
+      const dirSinIdx = header.findIndex(h => h.toLowerCase() === 'dir_sin');
+      const dirCosIdx = header.findIndex(h => h.toLowerCase() === 'dir_cos');
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
@@ -71,8 +83,10 @@ export class CSVLoader {
 
       const newData: SensorDataPoint[] = [];
       // ⚡ Bolt Optimization: include hIdx in maxIdx to ensure we parse height if present
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, uIdx, vIdx, wIdx);
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, uIdx, vIdx, wIdx, dirSinIdx, dirCosIdx);
       const hasVectors = uIdx !== -1 && vIdx !== -1;
+      // Real components always win; the inflow approximation only fills their absence.
+      const deriveVectors = !hasVectors && dirSinIdx !== -1 && dirCosIdx !== -1 && valIdx !== -1;
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -100,6 +114,7 @@ export class CSVLoader {
             let val = valIdx !== -1 ? NaN : 0;
             let h = hIdx !== -1 ? NaN : 0;
             let u = 0, v = 0, w = 0;
+            let dirSin = NaN, dirCos = NaN;
 
             while (currentPos <= contentEnd) {
                 let nextComma = text.indexOf(',', currentPos);
@@ -122,6 +137,10 @@ export class CSVLoader {
                     v = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === wIdx) {
                     w = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === dirSinIdx) {
+                    dirSin = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === dirCosIdx) {
+                    dirCos = parseFloat(text.substring(currentPos, nextComma));
                 }
 
                 // Stop if we passed the last column we need
@@ -141,6 +160,16 @@ export class CSVLoader {
                         u: isNaN(u) ? 0 : u,
                         v: isNaN(v) ? 0 : v,
                         w: isNaN(w) ? 0 : w,
+                    });
+                } else if (deriveVectors && !isNaN(dirSin) && !isNaN(dirCos)) {
+                    // dir_sin is the flow X component, dir_cos the Y — the Curator's own
+                    // documented (mis)naming.
+                    newData.push({
+                        x, y, z, val, h,
+                        u: val * dirSin,
+                        v: val * dirCos,
+                        w: 0,
+                        approxDir: true,
                     });
                 } else {
                     newData.push({ x, y, z, val, h });
