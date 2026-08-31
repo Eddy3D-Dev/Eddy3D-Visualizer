@@ -1286,7 +1286,18 @@ function animate() {
     applyPointSize();
   }
   if (particleFlow) {
-    particleFlow.step(particleClock.getDelta(), getFlowSpeedMultiplier());
+    // Contained: the overlay must never take the camera and the render loop down with
+    // it. An uncaught throw here would end animate() itself — frozen particles AND dead
+    // orbit controls, which reads as "the whole app broke" when only the overlay did.
+    try {
+      particleFlow.step(particleClock.getDelta(), getFlowSpeedMultiplier());
+    } catch (err) {
+      console.error('Eddy3D: particle overlay failed and was removed —', err);
+      scene.remove(particleFlow.object);
+      try { particleFlow.dispose(); } catch { /* already broken */ }
+      particleFlow = null;
+      updateParticleBackendLabel(null);
+    }
   }
   controls.update();
   renderer.render(scene, activeCamera);
