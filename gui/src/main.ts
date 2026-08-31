@@ -1015,8 +1015,9 @@ function describeParticleSupport(): { grid: VelocityGrid | null; reason: string 
   if (!datasetHasVectors(activeSensorData)) {
     return {
       grid: null,
-      reason: 'Animate wind particles through the velocity field (needs a CSV with U_x/U_y '
-        + 'columns — re-export with the current Export to Visualizer component)',
+      reason: 'Particles unavailable: this dataset is missing the U_x/U_y velocity fields. '
+        + 'Re-export from Grasshopper with the current Export to Visualizer component, '
+        + 'which writes them.',
     };
   }
   const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
