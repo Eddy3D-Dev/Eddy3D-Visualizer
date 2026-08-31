@@ -5,6 +5,12 @@ import {
   advectParticles,
   createParticleState,
   datasetHasVectors,
+  packVelocityField,
+  packSpawnTable,
+  particleTextureSize,
+  particleReferences,
+  CPU_PARTICLE_CAP,
+  GPU_PARTICLE_CAP,
   type VelocityGrid,
 } from './particles';
 import type { SensorDataPoint } from './csv-loader';
@@ -119,6 +125,119 @@ describe('sampleVelocity', () => {
     const out = { u: 0, v: 0 };
     expect(sampleVelocity(ramp, 5, 3, out)).toBe(true); // between columns 2 and 3
     expect(out.u).toBeCloseTo(2.5, 5);
+  });
+});
+
+// ── GPU packing (the data the GPGPU backend uploads) ─────────────────────────
+
+describe('packVelocityField', () => {
+  it('lays texel (ix, iy) out as cell iy*nx+ix, carrying u, v and the mask', () => {
+    const pts = uniformField(4, 3, 2, 1.5, -0.5);
+    pts.find((p) => p.x === 2 && p.y === 2)!.h = 10; // one building cell
+    const grid = buildVelocityGrid(pts, 2)!;
+    const tex = packVelocityField(grid);
+
+    expect(tex.width).toBe(grid.nx);
+    expect(tex.height).toBe(grid.ny);
+    expect(tex.data.length).toBe(grid.nx * grid.ny * 4);
+
+    const fluid = 0 * 4; // cell (0,0)
+    expect(tex.data[fluid]).toBeCloseTo(1.5, 5);
+    expect(tex.data[fluid + 1]).toBeCloseTo(-0.5, 5);
+    expect(tex.data[fluid + 2]).toBe(1);
+
+    const blockedCell = 1 * grid.nx + 1;
+    expect(grid.mask[blockedCell]).toBe(0);
+    const blocked = blockedCell * 4;
+    expect(tex.data[blocked + 2]).toBe(0);
+    // A blocked texel must carry ZERO velocity, not stale binned values: the shader
+    // weights by the mask, and a nonzero u behind a 0 mask is a trap for any future
+    // change that forgets the weighting.
+    expect(tex.data[blocked]).toBe(0);
+    expect(tex.data[blocked + 1]).toBe(0);
+  });
+});
+
+describe('packSpawnTable', () => {
+  it('holds the world centre of every fluid cell', () => {
+    const grid = buildVelocityGrid(uniformField(4, 4, 2, 1, 0), 2)!;
+    const tab = packSpawnTable(grid);
+    expect(tab.width * tab.height).toBeGreaterThanOrEqual(grid.fluidCells.length);
+
+    // Every entry must land on a fluid cell of the grid.
+    for (let i = 0; i < grid.fluidCells.length; i++) {
+      const x = tab.data[i * 4];
+      const y = tab.data[i * 4 + 1];
+      const ix = Math.round((x - grid.originX) / grid.step);
+      const iy = Math.round((y - grid.originY) / grid.step);
+      expect(grid.mask[iy * grid.nx + ix]).toBe(1);
+    }
+  });
+
+  it('pads with a real fluid cell, never with the origin', () => {
+    // 3x2 = 6 fluid cells pads to a 3x2 texture with no spare, so block one cell to
+    // force padding. The pad must not be (0, 0), which for this offset field is far
+    // outside the domain.
+    const pts = uniformField(3, 2, 2, 2, 0).map((p) => ({ ...p, x: p.x + 1000, y: p.y + 500 }));
+    pts[0].h = 9;
+    const grid = buildVelocityGrid(pts, 2)!;
+    const tab = packSpawnTable(grid);
+    for (let i = 0; i < tab.width * tab.height; i++) {
+      expect(tab.data[i * 4]).toBeGreaterThanOrEqual(1000);
+      expect(tab.data[i * 4 + 1]).toBeGreaterThanOrEqual(500);
+    }
+  });
+});
+
+describe('particleReferences', () => {
+  it('addresses texel CENTRES, never boundaries', () => {
+    const size = 4;
+    const refs = particleReferences(size);
+    expect(refs.length).toBe(size * size * 2);
+    // Half-texel in, not on the edge: a uv of exactly 0 or i/size lands on the boundary
+    // between texels and resolves to whichever neighbour a given driver rounds toward.
+    expect(refs[0]).toBeCloseTo(0.5 / size, 10);
+    expect(refs[1]).toBeCloseTo(0.5 / size, 10);
+    for (let i = 0; i < size * size; i++) {
+      expect(refs[i * 2]).toBeGreaterThan(0);
+      expect(refs[i * 2] * size % 1).toBeCloseTo(0.5, 10);
+      expect(refs[i * 2 + 1] * size % 1).toBeCloseTo(0.5, 10);
+    }
+  });
+
+  it('gives every particle a distinct texel', () => {
+    const size = 8;
+    const refs = particleReferences(size);
+    const seen = new Set<string>();
+    for (let i = 0; i < size * size; i++) seen.add(`${refs[i * 2]},${refs[i * 2 + 1]}`);
+    expect(seen.size).toBe(size * size);
+  });
+});
+
+describe('particleTextureSize', () => {
+  it('is a power of two holding at least the clamped count', () => {
+    for (const n of [1, 500, 4096, 20000, 999999]) {
+      const s = particleTextureSize(n, GPU_PARTICLE_CAP);
+      expect(Math.log2(s) % 1).toBe(0);
+      expect(s * s).toBeGreaterThanOrEqual(Math.max(500, Math.min(GPU_PARTICLE_CAP, n)));
+    }
+  });
+
+  it('never exceeds the cap it was given, and never starves a tiny field', () => {
+    expect(particleTextureSize(10_000_000, GPU_PARTICLE_CAP) ** 2).toBeLessThanOrEqual(
+      GPU_PARTICLE_CAP
+    );
+    expect(particleTextureSize(1, GPU_PARTICLE_CAP) ** 2).toBeGreaterThanOrEqual(500);
+  });
+
+  it('carries more particles than the CPU backend for the same field', () => {
+    // The whole point of the GPU path: the integration is free, so density can track
+    // the field several times over instead of stopping at what JS can advect per frame.
+    for (const cells of [800, 5000, 40000]) {
+      const cpuCount = Math.max(500, Math.min(CPU_PARTICLE_CAP, cells));
+      const gpuCount = particleTextureSize(cells * 4, GPU_PARTICLE_CAP) ** 2;
+      expect(gpuCount).toBeGreaterThan(cpuCount);
+    }
   });
 });
 

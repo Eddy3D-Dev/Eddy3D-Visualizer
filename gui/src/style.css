@@ -92,6 +92,38 @@ header {
   background: #ecfdf5;
 }
 
+/* Which particle integrator is actually running. Empty (and invisible) until a flow
+   exists, so the row reads exactly as before when particles are off. */
+.backend-badge:empty {
+  display: none;
+}
+
+.backend-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border-color);
+  background: var(--secondary-bg);
+  color: var(--text-secondary, #6b7280);
+  vertical-align: middle;
+}
+
+.backend-badge[data-backend='gpu'] {
+  color: #059669;
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
+.backend-badge[data-backend='cpu'] {
+  color: #b45309;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
 h1 {
   font-family: var(--font-mono);
   font-weight: 700;

@@ -27,6 +27,100 @@ export interface VelocityGrid {
   fluidCells: Int32Array;
 }
 
+/** An RGBA float texture's payload plus its dimensions, ready for THREE.DataTexture. */
+export interface PackedTexture {
+  data: Float32Array;
+  width: number;
+  height: number;
+}
+
+/**
+ * The velocity grid as one RGBA float texel per cell — R = u, G = v, B = mask (1 fluid,
+ * 0 blocked), A = 0 — laid out so texel (ix, iy) is cell `iy * nx + ix`, i.e. the same
+ * indexing {@link sampleVelocity} uses. The GPU backend does its own mask-weighted
+ * bilinear read of this, so the texture is sampled with NearestFilter and never needs
+ * float-linear filtering support.
+ */
+export function packVelocityField(grid: VelocityGrid): PackedTexture {
+  const data = new Float32Array(grid.nx * grid.ny * 4);
+  for (let c = 0; c < grid.nx * grid.ny; c++) {
+    const o = c * 4;
+    const fluid = grid.mask[c] === 1;
+    data[o] = fluid ? grid.u[c] : 0;
+    data[o + 1] = fluid ? grid.v[c] : 0;
+    data[o + 2] = fluid ? 1 : 0;
+    data[o + 3] = 0;
+  }
+  return { data, width: grid.nx, height: grid.ny };
+}
+
+/**
+ * The world-space centre of every fluid cell, as an RGBA float texture (R = x, G = y),
+ * so the GPU can respawn a particle by drawing one random index — the same uniform draw
+ * over `fluidCells` that the CPU backend's respawn does. Padding texels repeat the last
+ * fluid cell rather than sitting at (0, 0), which would be a spawn point outside the
+ * field for any grid whose origin is not the model origin.
+ */
+export function packSpawnTable(grid: VelocityGrid): PackedTexture {
+  const n = grid.fluidCells.length;
+  const width = Math.max(1, Math.ceil(Math.sqrt(n)));
+  const height = Math.max(1, Math.ceil(n / width));
+  const data = new Float32Array(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const c = grid.fluidCells[Math.min(i, n - 1)];
+    const ix = c % grid.nx;
+    const iy = (c / grid.nx) | 0;
+    const o = i * 4;
+    data[o] = grid.originX + ix * grid.step;
+    data[o + 1] = grid.originY + iy * grid.step;
+    data[o + 2] = 0;
+    data[o + 3] = 0;
+  }
+  return { data, width, height };
+}
+
+/**
+ * Particle budget for the CPU backend: about one per fluid cell, never so few that the
+ * field looks empty nor so many that per-frame JS advection and buffer writes stall the
+ * canvas.
+ */
+export const CPU_PARTICLE_CAP = 20000;
+
+/**
+ * The GPU backend integrates in a fragment shader and writes nothing per particle from
+ * JS, so its ceiling is texture size rather than frame time — it carries several
+ * particles per cell, which is what makes the flow read as flow instead of as speckle.
+ */
+export const GPU_PARTICLE_CAP = 65536;
+
+/**
+ * Square power-of-two side length holding at least `count` particles, clamped into
+ * [500, max]. Only the GPU backend needs this (its particle count IS a texture); the
+ * CPU backend counts particles directly, so `max` is always passed explicitly rather
+ * than defaulted to one backend's ceiling.
+ */
+export function particleTextureSize(count: number, max: number): number {
+  const clamped = Math.max(500, Math.min(max, count | 0));
+  let size = 1;
+  while (size * size < clamped) size *= 2;
+  return size;
+}
+
+/**
+ * One uv per particle, addressing the CENTRE of its texel in a size×size position
+ * texture. The half-texel offset is the whole content of this function: uvs on the texel
+ * boundary resolve to whichever neighbour the driver rounds toward, so a shader that
+ * looks correct on one GPU reads a different particle's position on another.
+ */
+export function particleReferences(size: number): Float32Array {
+  const refs = new Float32Array(size * size * 2);
+  for (let i = 0; i < size * size; i++) {
+    refs[i * 2] = ((i % size) + 0.5) / size;
+    refs[i * 2 + 1] = (((i / size) | 0) + 0.5) / size;
+  }
+  return refs;
+}
+
 /** True when any point in the dataset carries a usable in-plane velocity vector. */
 export function datasetHasVectors(data: SensorDataPoint[]): boolean {
   for (let i = 0; i < data.length; i++) {
@@ -241,6 +335,12 @@ export interface ParticleFlow {
   step(dt: number, speedMultiplier: number): void;
   dispose(): void;
   readonly particleCount: number;
+  /**
+   * Which integrator is actually running. Reported, not inferred: a GPU path that
+   * silently falls back to the CPU one looks exactly like a GPU path that works, and
+   * the UI and the browser check both assert on this rather than on "it animates".
+   */
+  readonly backend: 'gpu' | 'cpu';
 }
 
 /**
@@ -252,7 +352,7 @@ export interface ParticleFlow {
 export function createParticleFlow(grid: VelocityGrid): ParticleFlow {
   // Enough particles to read as flow without dusting over the field; scaled to the
   // fluid area so small studies do not drown and big ones do not starve.
-  const count = Math.max(500, Math.min(20000, grid.fluidCells.length | 0));
+  const count = Math.max(500, Math.min(CPU_PARTICLE_CAP, grid.fluidCells.length | 0));
   const state = createParticleState(count);
   for (let i = 0; i < count; i++) {
     respawn(state, i, grid, Math.random);
@@ -316,6 +416,7 @@ export function createParticleFlow(grid: VelocityGrid): ParticleFlow {
   return {
     object: group,
     particleCount: count,
+    backend: 'cpu',
     step(dt: number, speedMultiplier: number): void {
       // Clamp: a background tab hands back multi-second deltas that would teleport
       // every particle through the mask in one step.

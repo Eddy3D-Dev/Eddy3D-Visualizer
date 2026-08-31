@@ -16,6 +16,7 @@ if (versionBadge) {
 import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
 import { buildVelocityGrid, createParticleFlow, datasetHasVectors, type ParticleFlow } from './particles';
+import { createGpuParticleFlow } from './particles-gpu';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
 import { 
   captureAllScreenshots, 
@@ -1024,7 +1025,9 @@ function getFlowSpeedMultiplier(): number {
 }
 
 /**
- * (Re)creates the particle system for the active dataset — one grid binning pass.
+ * (Re)creates the particle system for the active dataset — one grid binning pass, then
+ * the GPU integrator, falling back to the CPU one on a device without float render
+ * targets. Which backend won is reported on the control, never assumed.
  */
 function rebuildParticleFlow() {
   if (particleFlow) {
@@ -1032,14 +1035,37 @@ function rebuildParticleFlow() {
     particleFlow.dispose();
     particleFlow = null;
   }
+  updateParticleBackendLabel(null);
   if (!particlesEnabled || activeSensorData.length === 0) return;
 
   const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
   if (!grid) return;
 
-  particleFlow = createParticleFlow(grid);
+  particleFlow = createGpuParticleFlow(grid, renderer) ?? createParticleFlow(grid);
   scene.add(particleFlow.object);
+  updateParticleBackendLabel(particleFlow);
   particleClock.getDelta(); // swallow the idle time so the first step is a normal frame
+}
+
+/**
+ * Says which integrator is running, next to the toggle. Not decoration: a GPU path that
+ * quietly degraded to the CPU one is indistinguishable from a working GPU path, so the
+ * fact is surfaced where a user (and the browser check) can read it.
+ */
+function updateParticleBackendLabel(flow: ParticleFlow | null) {
+  const badge = document.getElementById('particles-backend');
+  if (!badge) return;
+  if (!flow) {
+    badge.textContent = '';
+    badge.removeAttribute('data-backend');
+    return;
+  }
+  badge.textContent = flow.backend === 'gpu' ? 'GPU' : 'CPU';
+  badge.setAttribute('data-backend', flow.backend);
+  badge.title = flow.backend === 'gpu'
+    ? `${flow.particleCount.toLocaleString()} particles advected on the GPU`
+    : `${flow.particleCount.toLocaleString()} particles advected on the CPU `
+      + '(this device has no float render targets for the GPU path)';
 }
 
 // UI Event Listeners
