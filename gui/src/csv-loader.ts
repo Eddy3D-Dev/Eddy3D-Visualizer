@@ -6,6 +6,11 @@ export interface SensorDataPoint {
   z: number;
   val: number;
   h: number;
+  /** In-plane velocity components (m/s) from the optional U_x/U_y/U_z columns —
+   *  what the particle-flow overlay advects along. Absent in older exports. */
+  u?: number;
+  v?: number;
+  w?: number;
 }
 
 export class CSVLoader {
@@ -52,6 +57,11 @@ export class CSVLoader {
       const zIdx = header.findIndex(h => h.toLowerCase() === 'z_relative' || h.toLowerCase() === 'z');
       const valIdx = header.findIndex(h => h.toLowerCase() === 'mag_u' || h.toLowerCase() === 'u' || h.toLowerCase().includes('mag_u'));
       const hIdx = header.findIndex(h => h.toLowerCase() === 'bldg_height' || h.toLowerCase().includes('height'));
+      // Optional velocity components (the Export to Visualizer component writes U_x/U_y/U_z);
+      // they feed the particle-flow overlay and are simply absent in older exports.
+      const uIdx = header.findIndex(h => h.toLowerCase() === 'u_x');
+      const vIdx = header.findIndex(h => h.toLowerCase() === 'u_y');
+      const wIdx = header.findIndex(h => h.toLowerCase() === 'u_z');
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
@@ -61,7 +71,8 @@ export class CSVLoader {
 
       const newData: SensorDataPoint[] = [];
       // ⚡ Bolt Optimization: include hIdx in maxIdx to ensure we parse height if present
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx);
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, uIdx, vIdx, wIdx);
+      const hasVectors = uIdx !== -1 && vIdx !== -1;
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -88,6 +99,7 @@ export class CSVLoader {
             // Default val/h to 0 if column not in header, else NaN (expecting value)
             let val = valIdx !== -1 ? NaN : 0;
             let h = hIdx !== -1 ? NaN : 0;
+            let u = 0, v = 0, w = 0;
 
             while (currentPos <= contentEnd) {
                 let nextComma = text.indexOf(',', currentPos);
@@ -104,6 +116,12 @@ export class CSVLoader {
                     val = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === hIdx) {
                     h = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === uIdx) {
+                    u = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === vIdx) {
+                    v = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === wIdx) {
+                    w = parseFloat(text.substring(currentPos, nextComma));
                 }
 
                 // Stop if we passed the last column we need
@@ -115,7 +133,18 @@ export class CSVLoader {
             }
 
             if (!isNaN(x) && !isNaN(y) && !isNaN(z) && !isNaN(val)) {
-                newData.push({ x, y, z, val, h });
+                if (hasVectors) {
+                    // A malformed cell parses NaN — treat as still air, matching the loader's
+                    // tolerance for the scalar columns.
+                    newData.push({
+                        x, y, z, val, h,
+                        u: isNaN(u) ? 0 : u,
+                        v: isNaN(v) ? 0 : v,
+                        w: isNaN(w) ? 0 : w,
+                    });
+                } else {
+                    newData.push({ x, y, z, val, h });
+                }
             }
         }
 

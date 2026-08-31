@@ -143,6 +143,20 @@
               <option value="magma">Magma</option>
             </select>
           </div>
+          <div class="toggle-item disabled" id="particles-control" title="Animate wind particles through the velocity field (needs a CSV with U_x/U_y columns — re-export with the current Export to Visualizer component)">
+            <label for="particles" class="toggle-label">Particles</label>
+            <label class="switch">
+              <input type="checkbox" role="switch" id="particles" disabled aria-label="Particles" title="Animate wind particles through the velocity field (needs a CSV with U_x/U_y columns — re-export with the current Export to Visualizer component)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-item disabled" id="flow-speed-control" style="flex-direction: column; align-items: flex-start;" title="Enable 'Particles' to adjust the animation pace">
+            <div class="range-header">
+              <label for="flow-speed">Flow Speed</label>
+              <output id="flow-speed-display" for="flow-speed" class="range-output" aria-hidden="true">1.0</output>
+            </div>
+            <input type="range" id="flow-speed" min="0.2" max="4" value="1" step="0.1" class="range-input" disabled aria-label="Flow Speed" title="Enable 'Particles' to adjust the animation pace">
+          </div>
         </div>
 
         <div class="control-group">

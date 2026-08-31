@@ -105,6 +105,36 @@ describe('CSVLoader', () => {
       loader.processCSVData('x,y,z,mag_u\n5,6,7,8\n9,10,11,12', 'dup.csv');
       expect(loader.getDataset('dup.csv')).toHaveLength(2);
     });
+
+    it('parses U_x/U_y/U_z velocity components (the Export to Visualizer header)', () => {
+      const csv = 'X,Y,Z_relative,U_at_z,mag_U,U_x,U_y,U_z\n1,2,3,5,5,3,-4,0.5\n4,5,6,0,0,0,0,0';
+      const { loader } = makeLoader();
+      loader.processCSVData(csv, 'vec.csv');
+      const data = loader.getDataset('vec.csv')!;
+      expect(data).toHaveLength(2);
+      expect(data[0].u).toBe(3);
+      expect(data[0].v).toBe(-4);
+      expect(data[0].w).toBe(0.5);
+      expect(data[1].u).toBe(0);
+    });
+
+    it('leaves velocity fields undefined for legacy CSVs without U_x/U_y', () => {
+      const { loader } = makeLoader();
+      loader.processCSVData(SIMPLE_CSV, 'legacy.csv');
+      const data = loader.getDataset('legacy.csv')!;
+      expect(data[0].u).toBeUndefined();
+      expect(data[0].v).toBeUndefined();
+    });
+
+    it('treats malformed vector cells as still air, keeping the row', () => {
+      const csv = 'x,y,z,mag_u,u_x,u_y,u_z\n1,2,3,4,abc,2,0';
+      const { loader } = makeLoader();
+      loader.processCSVData(csv, 'nanvec.csv');
+      const data = loader.getDataset('nanvec.csv')!;
+      expect(data).toHaveLength(1);
+      expect(data[0].u).toBe(0);
+      expect(data[0].v).toBe(2);
+    });
   });
 
   describe('dataset management', () => {

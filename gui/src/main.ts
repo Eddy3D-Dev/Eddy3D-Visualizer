@@ -15,6 +15,7 @@ if (versionBadge) {
 }
 import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
+import { buildVelocityGrid, createParticleFlow, datasetHasVectors, type ParticleFlow } from './particles';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
 import { 
   captureAllScreenshots, 
@@ -63,6 +64,9 @@ let sensorPoints: THREE.Points | null = null;
 let fixedSensorPoints: THREE.InstancedMesh | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
+let particleFlow: ParticleFlow | null = null;
+let particlesEnabled = false;
+const particleClock = new THREE.Clock();
 let activeSensorData: SensorDataPoint[] = [];
 let dataMin = 0;
 let dataMax = 1;
@@ -89,6 +93,8 @@ interface PersistedViewSettings {
   gaplessPoints: boolean;
   rotateToCamera: boolean;
   colormap: ColormapName;
+  particles: boolean;
+  flowSpeed: number;
 }
 
 function getManualPointSize(): number {
@@ -292,7 +298,9 @@ function persistViewSettings() {
     pointSize: Number.isFinite(pointSizeValue) ? pointSizeValue : DEFAULT_POINT_SIZE,
     gaplessPoints: gaplessToggle?.checked ?? true,
     rotateToCamera: rotateToCameraToggle?.checked ?? false,
-    colormap: savedColormap
+    colormap: savedColormap,
+    particles: (document.getElementById('particles') as HTMLInputElement | null)?.checked ?? false,
+    flowSpeed: getFlowSpeedMultiplier()
   };
 
   try {
@@ -405,6 +413,19 @@ function applyPersistedViewSettings() {
     updatePointSizeDisplay(clampedPointSize);
   } else {
     updatePointSizeDisplay(DEFAULT_POINT_SIZE);
+  }
+
+  const particlesToggle = document.getElementById('particles') as HTMLInputElement | null;
+  if (particlesToggle && typeof saved.particles === 'boolean') {
+    particlesToggle.checked = saved.particles;
+    particlesEnabled = saved.particles;
+  }
+  const flowSpeedSlider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  if (flowSpeedSlider && typeof saved.flowSpeed === 'number' && Number.isFinite(saved.flowSpeed)) {
+    const clamped = Math.min(parseFloat(flowSpeedSlider.max), Math.max(parseFloat(flowSpeedSlider.min), saved.flowSpeed));
+    flowSpeedSlider.value = clamped.toString();
+    const flowDisplay = document.getElementById('flow-speed-display');
+    if (flowDisplay) flowDisplay.textContent = clamped.toFixed(1);
   }
 
   gaplessPointSizingEnabled = gaplessToggle?.checked ?? true;
@@ -815,6 +836,9 @@ function renderDataset(name: string) {
   if (topViewToggle?.checked) {
     applyTopViewMode(true);
   }
+
+  updateParticleControls();
+  rebuildParticleFlow();
 }
 
 function createBuildingEdges(validBuildings: SensorDataPoint[]) {
@@ -954,6 +978,70 @@ function updateSensorColors(mapName: ColormapName) {
   }
 }
 
+// --- Particle flow (animated wind particles over the velocity field) ---
+
+/** Enable the Particles toggle only when the dataset carries U_x/U_y columns. */
+function updateParticleControls() {
+  const control = document.getElementById('particles-control');
+  const toggle = document.getElementById('particles') as HTMLInputElement | null;
+  const hasVectors = activeSensorData.length > 0 && datasetHasVectors(activeSensorData);
+
+  if (toggle) {
+    toggle.disabled = !hasVectors;
+    if (!hasVectors) {
+      toggle.checked = false;
+      particlesEnabled = false;
+    }
+  }
+  if (control) {
+    control.classList.toggle('disabled', !hasVectors);
+    const title = hasVectors
+      ? 'Animate wind particles through the velocity field'
+      : 'Animate wind particles through the velocity field (needs a CSV with U_x/U_y columns — re-export with the current Export to Visualizer component)';
+    control.setAttribute('title', title);
+    toggle?.setAttribute('title', title);
+  }
+  updateFlowSpeedControlState();
+}
+
+function updateFlowSpeedControlState() {
+  const control = document.getElementById('flow-speed-control');
+  const slider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  const active = particlesEnabled;
+  if (slider) slider.disabled = !active;
+  if (control) {
+    control.classList.toggle('disabled', !active);
+    control.setAttribute('title', active
+      ? 'Animation pace multiplier (1 = default)'
+      : "Enable 'Particles' to adjust the animation pace");
+  }
+}
+
+function getFlowSpeedMultiplier(): number {
+  const slider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  const v = slider ? parseFloat(slider.value) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/**
+ * (Re)creates the particle system for the active dataset — one grid binning pass.
+ */
+function rebuildParticleFlow() {
+  if (particleFlow) {
+    scene.remove(particleFlow.object);
+    particleFlow.dispose();
+    particleFlow = null;
+  }
+  if (!particlesEnabled || activeSensorData.length === 0) return;
+
+  const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
+  if (!grid) return;
+
+  particleFlow = createParticleFlow(grid);
+  scene.add(particleFlow.object);
+  particleClock.getDelta(); // swallow the idle time so the first step is a normal frame
+}
+
 // UI Event Listeners
 document.getElementById('auto-rotate')?.addEventListener('change', (e) => {
   controls.autoRotate = (e.target as HTMLInputElement).checked;
@@ -1004,6 +1092,20 @@ document.getElementById('rotate-to-camera')?.addEventListener('change', (e) => {
 document.getElementById('results-select')?.addEventListener('change', (e) => {
   const name = (e.target as HTMLSelectElement).value;
   renderDataset(name);
+});
+
+document.getElementById('particles')?.addEventListener('change', (e) => {
+  particlesEnabled = (e.target as HTMLInputElement).checked;
+  updateFlowSpeedControlState();
+  rebuildParticleFlow();
+  persistViewSettings();
+});
+
+document.getElementById('flow-speed')?.addEventListener('input', (e) => {
+  const val = parseFloat((e.target as HTMLInputElement).value);
+  const display = document.getElementById('flow-speed-display');
+  if (display && Number.isFinite(val)) display.textContent = val.toFixed(1);
+  persistViewSettings();
 });
 
 document.getElementById('show-buildings')?.addEventListener('change', (e) => {
@@ -1104,6 +1206,9 @@ function animate() {
   requestAnimationFrame(animate);
   if (gaplessPointSizingEnabled && rotatePointsToCameraEnabled && sensorPoints) {
     applyPointSize();
+  }
+  if (particleFlow) {
+    particleFlow.step(particleClock.getDelta(), getFlowSpeedMultiplier());
   }
   controls.update();
   renderer.render(scene, activeCamera);
