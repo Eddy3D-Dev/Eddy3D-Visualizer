@@ -62,6 +62,14 @@ export class CSVLoader {
       // Roof-level value columns
       const roofIdx = header.findIndex(h => h.toLowerCase() === 'mag_u_roof');
       const kRoofIdx = header.findIndex(h => h.toLowerCase() === 'k_roof');
+      // Optional velocity components (Export to Visualizer writes U_x/U_y/U_z). They feed
+      // the particle-flow overlay and are simply absent in older exports. Lost once in the
+      // main->dev merge (ee95f08), which shipped the overlay with a loader blind to them —
+      // every dataset then reported "missing the U_x/U_y velocity fields".
+      const uIdx = header.findIndex(h => h.toLowerCase() === 'u_x');
+      const vIdx = header.findIndex(h => h.toLowerCase() === 'u_y');
+      const wIdx = header.findIndex(h => h.toLowerCase() === 'u_z');
+      const hasVectors = uIdx !== -1 && vIdx !== -1;
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
@@ -72,7 +80,7 @@ export class CSVLoader {
       const newDataU: SensorDataPoint[] = [];
       const newDataK: SensorDataPoint[] = [];
       // ⚡ Bolt Optimization: include all known column indices in maxIdx to ensure we parse all present columns
-      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx, roofIdx, kRoofIdx);
+      const maxIdx = Math.max(xIdx, yIdx, zIdx, valIdx, hIdx, kIdx, roofIdx, kRoofIdx, uIdx, vIdx, wIdx);
 
       // Advance past the header
       lineStart = lineEnd + 1;
@@ -102,6 +110,7 @@ export class CSVLoader {
             let h = hIdx !== -1 ? NaN : 0;
             let roofVal = roofIdx !== -1 ? NaN : 0;
             let kRoofVal = kRoofIdx !== -1 ? NaN : 0;
+            let u = 0, v = 0, w = 0;
 
             while (currentPos <= contentEnd) {
                 let nextComma = text.indexOf(',', currentPos);
@@ -124,6 +133,12 @@ export class CSVLoader {
                     roofVal = parseFloat(text.substring(currentPos, nextComma));
                 } else if (colIdx === kRoofIdx) {
                     kRoofVal = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === uIdx) {
+                    u = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === vIdx) {
+                    v = parseFloat(text.substring(currentPos, nextComma));
+                } else if (colIdx === wIdx) {
+                    w = parseFloat(text.substring(currentPos, nextComma));
                 }
 
                 // Stop if we passed the last column we need
@@ -135,11 +150,12 @@ export class CSVLoader {
             }
 
             if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-                if (valIdx !== -1 && !isNaN(val)) {
-                    newDataU.push({ x, y, z, val, h });
-                } else if (valIdx === -1 && !isNaN(val)) {
-                    // Fallback for when no u column is found but x,y,z are valid
-                    newDataU.push({ x, y, z, val, h });
+                if (!isNaN(val)) {
+                    // A malformed vector cell parses NaN — treat as still air, matching the
+                    // loader's tolerance for the scalar columns.
+                    newDataU.push(hasVectors
+                        ? { x, y, z, val, h, u: isNaN(u) ? 0 : u, v: isNaN(v) ? 0 : v, w: isNaN(w) ? 0 : w }
+                        : { x, y, z, val, h });
                 }
 
                 if (kIdx !== -1 && !isNaN(kVal)) {
