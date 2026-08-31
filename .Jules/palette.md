@@ -1,69 +1,109 @@
-## 2024-05-24 - Interactive Disabled State Titles
-**Learning:** Adding `title` attributes (tooltips) to natively disabled inputs and buttons significantly improves user clarity by explaining *why* an element is inactive (e.g., "Upload a dataset to enable downloads" or "Disable 'Gapless Points' to adjust manually"), reducing user frustration and guesswork. We must also update the title dynamically when the disabled state changes.
-**Action:** Always include explanatory `title` tooltips on `disabled` form controls or buttons, and toggle them off when the element becomes enabled via JS.
+## 2026-04-10 - Prevent Focus Loss on Dynamic State Dismissal
+**Learning:** When a dynamic UI component (like an "Empty State" container with upload buttons) is removed or hidden while a child element holds keyboard focus, the browser will drop focus entirely to the `<body>` element. This completely breaks the navigation context for keyboard and screen reader users, forcing them to start tabbing from the top of the page again.
+**Action:** Whenever hiding or destroying a component that might contain the active element (e.g., `container.contains(document.activeElement)`), programmatically move focus (`.focus()`) to the most logical next element (like the main content area or the element that triggered the state) before or immediately after hiding it.
 
-## 2024-05-24 - Testing Visually Hidden Elements
-**Learning:** When using Playwright to test custom UI elements like toggle switches (which often rely on visually hidden checkboxes) in this application, standard `.click()` interactions may fail with "Element is outside of the viewport" errors.
-**Action:** Use `page.evaluate()` to programmatically interact with these elements via JavaScript (e.g., setting `.checked` and dispatching a `change` event) or use `.click(force=True)` to bypass visibility checks during testing.
-## 2026-03-02 - Mobile Menu ARIA States
-**Learning:** The mobile menu toggle button (`#menu-toggle`) visually opened and closed the sidebar but lacked the `aria-expanded` attribute, leaving screen reader users unaware of the state change. It is crucial to dynamically update `aria-expanded` to reflect visibility state.
-**Action:** Ensure that UI elements controlling off-canvas menus or sidebars have an initial `aria-expanded="false"` and dynamically toggle it to `"true"` when open via JS.
+## 2026-04-10 - Verify CSS Active States with Playwright
+**Learning:** Standard Playwright `locator.click()` actions are too fast to reliably capture `:active` CSS transition states (like a scale down effect for tactile feedback) in screenshots because the click completes before the screenshot is taken.
+**Action:** When writing verification scripts that must visually capture `:active` states, manually simulate the interaction by moving the mouse to the element's bounding box (`page.mouse.move`), holding the mouse button down (`page.mouse.down()`), adding a tiny delay to allow CSS transitions to trigger (`page.wait_for_timeout(50)`), taking the screenshot, and only then releasing the mouse (`page.mouse.up()`).
 
-## 2026-03-03 - File vs Folder Upload UX
-**Learning:** Providing a single 'Upload Folder' input creates unnecessary friction for users who just want to visualize a single data file. Even when backend/JS logic supports individual files, missing UI elements block user workflows.
-**Action:** Always provide side-by-side 'File' and 'Folder' upload options when an application supports processing both individual items and directories.
+## 2026-04-19 - Prevent Ungraceful Text Truncation with Icons
+**Learning:** For narrow fixed-width UI elements like sidebar buttons, long descriptive text (e.g., "Download Screenshots") can easily overflow and truncate ("Downloa...") on smaller screens or when UI scales change, leading to a degraded UX.
+**Action:** Replace long text with a concise verb and an accompanying SVG icon (e.g., `<svg> Download`). Use `display: inline-flex` with `gap` and `align-items: center` for perfect alignment, and apply `flex-shrink: 0` to the icon to ensure it never distorts when space gets tight.
 
-## 2026-03-04 - Consistent Focus Indicators
-**Learning:** Default browser focus rings are often inconsistent across different elements (like `<select>`, `<input type="range">`, and `<button>`) and can suffer from poor contrast against custom backgrounds. Relying on default focus outlines breaks the visual cohesiveness of the app and can harm accessibility for keyboard users who rely on clear focus indicators.
-**Action:** Always define consistent `:focus-visible` styles explicitly in the CSS (e.g., using `outline: 2px solid var(--text-primary); outline-offset: 2px;`) for all interactive elements to ensure a unified and accessible keyboard navigation experience.
+## 2026-04-19 - Fix Off-Canvas Menu Keyboard Trapping
+**Learning:** Sliding off-canvas menus using only `transform: translateX(-100%)` visually hides them, but leaves their interactive children (buttons, links, inputs) in the browser's accessibility tree and keyboard focus order. This traps screen reader and keyboard users in an invisible section of the UI.
+**Action:** Always pair `transform` with `visibility: hidden` for the closed state and `visibility: visible` for the open state. To preserve the slide animation, sequence the CSS `transition` property for `visibility` with a delay when closing (e.g., `visibility 0s 0.3s`) and no delay when opening (`visibility 0s 0s`).
+## 2026-04-23 - Enhance Keyboard Shortcut Hints with Semantic kbd Tags
+**Learning:** Using semantic HTML `<kbd>` tags instead of generic presentation tags like `<strong>` for keyboard/mouse interaction hints provides better semantic meaning for assistive technologies. Additionally, styling these tags to look like physical keycaps improves visual scannability and gives the application a more polished, professional feel.
+**Action:** When displaying keyboard shortcuts or interaction hints, always use the `<kbd>` tag and apply a consistent, tactile CSS style (borders, border-radius, background, and subtle shadow) across the design system.
 
-## 2026-03-04 - Screen Reader Progress Announcements
-**Learning:** When a button's text dynamically updates to show progress (like "Capturing 1/4..."), screen readers do not automatically announce this change, leaving visually impaired users unaware of ongoing background tasks or state changes.
-**Action:** Add `aria-live="polite"` to elements (like buttons or status regions) whose text updates dynamically to indicate progress, ensuring screen readers announce the changes without interrupting the user.
+## 2026-04-26 - Enable Keyboard Controls for Three.js Canvas
+**Learning:** Three.js `OrbitControls` supports keyboard interactions (like arrow keys for panning), but they are ignored by default because `<canvas>` elements are not natively focusable in the DOM. This breaks accessibility for keyboard users trying to interact with the 3D scene.
+**Action:** Always manually add `tabindex="0"` to the WebGL canvas element (`renderer.domElement`) and set appropriate ARIA attributes (like `role="img"` and `aria-label="Interactive 3D Scene"`) so screen readers can announce it when it receives focus.
 
-## 2026-03-05 - Missing Empty States
-**Learning:** Presenting a blank canvas or empty main content area when no data is loaded creates ambiguity for users. They might assume the application is broken or still loading.
-**Action:** Always provide an explicitly designed empty state UI overlay with a clear icon, a brief explanation, and actionable guidance (e.g., "Upload a CSV file...") for the main content area when it has no data to display.
+## 2026-04-26 - Prevent Accidental Text Selection on Interactive Controls
+**Learning:** During rapid clicking or tapping on highly interactive form controls like toggle switches, sliders, dropdowns, and their associated labels, the browser's default behavior often triggers text highlighting or double-tap-to-zoom on mobile devices. This degrades the user experience, making the web application feel unresponsive and unlike a native app.
+**Action:** Always apply `user-select: none;` and `touch-action: manipulation;` to frequently toggled elements (`.switch`, `.range-input`, `<select>`, and `<label>` tags) to ensure a smooth, app-like interaction flow without visual interruptions.
 
-## 2026-03-05 - Semantic Document Structure
-**Learning:** Using generic `<div>` tags for top-level visual headers (like logos) and main content areas (like a WebGL canvas container) breaks document structure for screen readers, making it harder for users to navigate the page effectively.
-**Action:** Always use semantic HTML tags. Wrap top-level logos in an `<h1>` (with appropriate `alt` text), and wrap the primary interactive content area in a `<main>` tag with an `aria-label`.
+## 2026-05-15 - Provide Feedback on Invalid File Uploads
+**Learning:** Silently ignoring unsupported file types (like dragging a `.txt` file into an app expecting `.csv`) breaks user trust and leads them to assume the application is broken. Users need immediate, clear feedback when their action fails.
+**Action:** When handling file uploads or drag-and-drop interactions, always validate the file types and trigger an immediate visual error notification (like a toast) explaining why the files were rejected, rather than just silently discarding them.
 
-## 2025-03-07 - Drag & Drop Visual Feedback
-**Learning:** Adding subtle CSS animations (like `pulse-border`) using `::after` pseudo-elements on valid drop zones prevents jarring layout shifts while providing clear, interactive feedback during drag operations. Counting dragenter/dragleave events is necessary to avoid flickering when a user hovers over child elements inside the drop zone container.
-**Action:** Always implement a reference counter for drag events in JavaScript when the drop zone has children to prevent erratic visual toggling of hover states, and use absolute positioned pseudo-elements for the drop visual instead of changing borders directly.
-## 2026-03-08 - Added Upload Actions to Empty State
-**Learning:** When displaying an empty state overlay over a functional drag-and-drop zone, the overlay itself often has `pointer-events: none` to allow drop events to pass through to the canvas underneath.
-**Action:** When adding clickable Call-to-Action (CTA) buttons inside such an empty state, explicitly apply `pointer-events: auto` to the buttons or their container so users can interact with them.
+## 2026-05-08 - Prevent Screen Reader Spam on Range Sliders with Output Elements
+**Learning:** Using semantic `<output>` elements alongside `<input type="range">` is great for visual users, but because `<output>` has an implicit `role="status"` (an `aria-live="polite"` region), it can flood the screen reader's speech queue with every incremental change during dragging. Since native range inputs already announce their value changes to assistive technologies seamlessly, the output element causes annoying double-speaking and live region spam.
+**Action:** Always apply `aria-hidden="true"` to `<output>` elements that are used purely as visual companions to `<input type="range">` elements to keep the screen reader experience clean and responsive.
 
-## 2026-03-09 - Keyboard Navigation and Skip Links
-**Learning:** Adding a "skip to content" link allows keyboard users to bypass long navigation menus, but the target container (like `<main>`) must have `tabindex="-1"` to be programmatically focusable. Without this, the focus sequence breaks and the user must still tab through the entire sidebar. Additionally, applying `outline: none` to the target container when focused prevents an ugly visual focus ring on a structural element, ensuring a smooth experience.
-**Action:** Always include a `tabindex="-1"` and `outline: none` on the target element of a "skip to content" link to ensure proper keyboard tab sequence flow without degrading visual aesthetics.
+## 2026-06-15 - Ensure Toast Auto-Dismiss Timers Resume Properly
+**Learning:** It's good accessibility practice to pause auto-dismiss timers on toast notifications when a user hovers over or focuses on them, giving them more time to read. However, if you only pause the timer (`mouseenter` / `focusin`) but fail to resume it when the user leaves (`mouseleave` / `focusout`), the notification will stay on screen forever, cluttering the UI and confusing the user.
+**Action:** When implementing auto-dismissing notifications with a pause feature, always ensure the lifecycle is complete by providing matching event listeners to resume the timeout once interaction ceases.
 
-## 2026-03-09 - ARIA Switch Role for Custom Toggles
-**Learning:** When styling native checkboxes `<input type="checkbox">` as sliding toggles (e.g., using a `.switch` wrapper and visually hiding the input), screen readers default to announcing them as standard checkboxes. This mismatch between visual presentation (a switch) and semantic meaning (a checkbox) can be confusing.
-**Action:** Always add `role="switch"` to visually hidden checkbox inputs that function as toggles. This ensures assistive technologies correctly announce the component and its on/off state, matching the user's visual expectations.
+## 2026-06-20 - Focus Interactive Canvas Directly
+**Learning:** When moving focus programmatically (like from a 'Skip to 3D Canvas' link or after closing an Empty State overlay), focusing a wrapper `<div>` containing a `<canvas>` forces keyboard users to press Tab an extra time before they can actually interact with the canvas (e.g. pan/rotate with arrow keys). Wrapper elements typically should not receive focus unless they are scrollable regions.
+**Action:** Always assign a unique ID directly to the focusable `<canvas>` element (e.g., `renderer.domElement`) and target it directly with skip links (`href="#webgl-canvas"`) or programmatic focus (`renderer.domElement.focus()`). Remove `tabindex` and `focus:outline-none` from the wrapper container.
 
-## 2026-03-11 - Explicit Disabled States for Custom Form Controls
-**Learning:** When adding custom styling (like `cursor: pointer` or custom backgrounds) to form controls such as `<select>`, the browser's default disabled visual cues are often overridden. This leaves elements looking active and clickable even when they possess the `disabled` attribute, frustrating users.
-**Action:** Always provide an explicit `:disabled` CSS rule (e.g., `cursor: not-allowed; opacity: 0.7; background-color: var(--secondary-bg);`) for any form control that receives custom styling to restore clear visual feedback of its inactive state.
+## 2026-06-25 - Make Disabled Buttons Discoverable for Keyboard Users
+**Learning:** Native `disabled` attributes completely remove elements from the focus order, making them invisible to keyboard-only and screen reader users. If a button has a helpful `title` explaining *why* it is disabled (e.g., "Upload a dataset to enable downloads"), these users will never be able to discover that information.
+**Action:** When a disabled button contains important contextual help via a tooltip (`title`), use `aria-disabled="true"` instead of the native `disabled` attribute. Ensure the CSS mimics the disabled visual state, and add a JavaScript guard clause (`if (btn.getAttribute('aria-disabled') === 'true') return;`) to prevent the action from firing.
 
-## 2026-03-12 - Consistent Interactive Cursors
-**Learning:** Some custom UI form elements like `<select>` and `<input type="range">` lacked a default interactive `cursor: pointer` state when enabled, but gained a visible `cursor: not-allowed` when disabled. This created inconsistent visual cues for interactivity across the application where other custom elements (like buttons and toggles) always had pointer cues.
-**Action:** Ensure all custom styled interactive form elements explicitly include `cursor: pointer` when enabled so they match standard interactive button behaviors and contrast clearly with their `disabled` states.
+## 2024-07-26 - Unified Hover States for Row Controls
+**Learning:** When a toggle switch (or similar small control) is placed inside a full-width row alongside a text label, users naturally perceive the entire row as the clickable target. If only the switch itself reacts to hover, it breaks this mental model and makes the target feel smaller than it actually is.
+**Action:** Use CSS to trigger the control's visual hover state when the user hovers anywhere over the parent row (e.g., `.toggle-item:hover .switch .slider`). This visual feedback reinforces that clicking anywhere on the label or row will toggle the control.
 
-## 2024-03-14 - Domain-Specific Toggles Tooltips
-**Learning:** Providing explicit tooltips (via `title` attributes) for domain-specific technical toggles (like "Gapless Points" or "Billboarding") significantly improves the discoverability and usability of advanced features for new users without cluttering the clean UI. Placing the tooltip on the parent container (e.g., `.toggle-item`) rather than just the input ensures the hint is visible when hovering anywhere near the control.
-**Action:** When implementing new configuration options that use specialized terminology, always include an informative `title` attribute on the wrapper element to explain the effect.
+## 2026-07-28 - Animate Accordions Safely with CSS Grid
+**Learning:** Animating the height of an accordion or collapsible section using `grid-template-rows: 0fr` to `1fr` is a modern, performant alternative to animating `max-height`. However, if you don't sequence the `visibility` property alongside it, the collapsed content remains focusable in the accessibility tree and keyboard tab order, creating a hidden focus trap.
+**Action:** When using CSS Grid for collapsible animations, pair the grid transition with a sequenced visibility transition. When closing, delay the visibility hide (e.g., `visibility 0s 0.3s`) so the animation can finish. When opening, transition visibility immediately (e.g., `visibility 0s 0s`). Make sure the inner container has `min-height: 0` and `overflow: hidden`.
 
-## 2025-02-17 - Dynamic ARIA and Tooltips for Toggles
-**Learning:** For collapsible menus and toggles, just updating `aria-expanded` is often insufficient for clarity. Users (both sighted via tooltips and visually impaired via screen readers) benefit significantly when the `aria-label` and `title` attributes dynamically update to reflect the *next* actionable state (e.g., changing from "Open Sidebar" to "Close Sidebar").
-**Action:** When implementing or fixing toggle controls for menus/panels, always update `title` and `aria-label` dynamically via JavaScript alongside `aria-expanded` to clearly communicate the action the toggle will perform.
+## 2026-08-01 - Avoid InnerHTML for Text Updates on Elements with SVGs
+**Learning:** Using `element.innerHTML = originalHTML` to restore the state of a button (or other UI component) that contains embedded SVGs causes the browser to completely re-parse the SVG structure. This not only incurs unnecessary performance overhead but also frequently causes a micro layout shift (jank) or flicker, especially if the SVG relies on external CSS. It can also cause the element to lose any attached event listeners or active focus states.
+**Action:** When temporarily changing the text of an element (like a button switching to "Loading..."), target the specific text node or inner text wrapping `<span>`. Save `span.textContent`, and restore it directly via `span.textContent = originalText` rather than replacing the entire `innerHTML` of the parent button.
 
-## 2026-03-15 - Global Drag & Drop Zones
-**Learning:** Attaching drag-and-drop listeners solely to a specific container (like a canvas) creates a fragile UX. If a user accidentally drops a file just outside the target area (e.g., on a sidebar or margin), the browser will default to opening the file directly, navigating away from the application and destroying their current session state.
-**Action:** Always attach drag-and-drop event listeners to the `window` or `document` level to intercept all drops across the entire viewport, while still providing visual feedback (like highlighting) on the specific target area.
+## 2026-06-17 - Add Canvas View Reset Keyboard Shortcut
+**Learning:** Users can easily get "lost" when panning and zooming in 3D scenes if they move the camera far away from the data. While UI buttons exist for some actions, providing a quick keyboard shortcut to recenter the camera greatly improves UX for power users and those navigating primarily with keyboards.
+**Action:** When adding global keyboard shortcuts (like pressing 'R' to reset view), explicitly check if the user is typing in a text field (e.g., `document.activeElement?.tagName === 'INPUT'`) to prevent triggering the shortcut accidentally while they are naming a file or entering text.
 
-## 2026-03-17 - Actionable Primary Buttons Needs Contrast and Tactile Feedback
-**Learning:** The "Download Screenshots" button used a light blue color (`#25b6eb`) that failed color contrast ratio against white text. Additionally, major primary action buttons (like file upload and downloads) lacked an `:active` CSS state, providing no visual tactile feedback when a user clicks on them.
-**Action:** Use a darker accessible color like `#2563eb` for buttons with white text, and always add a subtle `:active { transform: scale(0.98); }` to primary interaction elements.
+## 2026-08-15 - Ensure Tooltips on Wrappers are Discoverable by Keyboard
+**Learning:** Placing descriptive tooltips (`title` attributes) on non-focusable wrapper elements (like `.toggle-item` `<div>`s or custom `<label>` buttons) works for mouse hover, but hides the context from keyboard-only and screen reader users. These users focus the inner interactive control (e.g., the hidden `<input>`), missing the wrapper's tooltip entirely.
+**Action:** Whenever a non-focusable wrapper has a `title` attribute to provide context, explicitly duplicate that `title` onto the inner focusable element (like the `<input>`, `<select>`, or `<button>`). This ensures assistive technologies correctly announce the description when the element receives focus.
+
+## 2024-08-20 - Ensure Tooltips on Custom Inputs are Discoverable by Keyboard
+**Learning:** Custom UI inputs (like range sliders inside flex containers) might be visually clear to sighted users, but they lack context for keyboard-only and screen-reader users if the tooltip (`title` attribute) is only applied to the container or label.
+**Action:** Always ensure the `title` attribute is placed directly on the focusable interactive element (e.g., `<input type="range">`) to guarantee discoverability by assistive technologies.
+
+## 2024-08-20 - Add Non-Standard Keyboard Shortcut Instructions to Aria Labels
+**Learning:** For complex interactive components like WebGL canvases that support non-standard keyboard shortcuts (e.g., using arrow keys to pan, pressing R to reset), screen reader users are completely unaware of these interactions unless explicitly told.
+**Action:** When a focusable element (like `<canvas>`) has custom keyboard shortcuts, append instructions directly to the element's `aria-label` (e.g., '...Use arrow keys to pan, or press R to reset the view.') so they are announced upon focus.
+
+## 2024-08-20 - Initialize Dynamic Accessibility Attributes in Static HTML
+**Learning:** When interactive elements (like a toggle button) have their `aria-label`, `aria-expanded`, or `title` updated dynamically via JavaScript *after* an interaction occurs, their initial state in the DOM can be poorly accessible if the static HTML lacks these attributes. Screen readers evaluating the page on initial load will miss the context.
+**Action:** Always provide the initial, correct accessibility attributes (e.g., `aria-label="Show advanced settings"`) directly within the static HTML template for any element whose properties are dynamically managed later.
+
+## 2024-08-20 - Add Tactile Feedback to Toggle Switches
+**Learning:** Standard CSS hover and active states (like background color changes) often feel flat. Adding slight scale or stretch animations on `:active` (when the user holds down the click/tap) provides a sense of physical weight and tactile feedback, making web controls feel more like native OS components.
+**Action:** Enhance toggle switches and similar controls with subtle dimension changes (e.g., stretching the slider thumb slightly horizontally) during the `:active` state to increase user satisfaction and perceived responsiveness.
+
+## 2024-08-20 - Prevent Flash of Drag-and-Drop Dropzones on Text Drag
+**Learning:** Attaching standard drag-and-drop event listeners (`dragover`, `dragenter`, etc.) to the `window` or `document` to create a global full-screen file dropzone can cause a jarring UX issue: if a user accidentally highlights text or clicks and drags a link anywhere on the page, the browser fires `dragover` events, instantly flashing the large "Drop files here" UI, disrupting their workflow.
+**Action:** Always validate the payload of the `DragEvent` early in the `dragover` and `dragenter` handlers by checking `e.dataTransfer.types.includes('Files')`. If it's not a file payload (e.g., text or URL), exit the handler immediately without preventing default behavior or showing the drop UI.
+
+## 2026-08-25 - Use CSS Custom Properties for Inline Progress Bars
+**Learning:** When displaying progress for a long-running async task inside a button, updating DOM nodes or adding a separate progress bar element can clutter the UI or cause layout shifts. By dynamically updating an inline CSS custom property (e.g., `--progress`) and mapping it to a `linear-gradient` background in the CSS, we provide smooth, immediate visual feedback directly within the button itself with minimal code overhead.
+**Action:** Use CSS custom properties tied to `linear-gradient` backgrounds to visually indicate progress on buttons during async operations without requiring complex DOM manipulation.
+
+## 2024-08-27 - Apply `cursor: not-allowed` to Labels of Disabled Controls
+**Learning:** Native form controls with the `disabled` attribute often get browser-default `cursor: not-allowed` styling, but their associated `<label>` elements or wrapper containers do not. When a user hovers over the text label of a disabled control, they see a standard pointer or text cursor, which creates mixed signals about the element's interactivity.
+**Action:** Always explicitly apply `cursor: not-allowed` to the associated `<label>`, parent container, or any interactive sub-elements of a disabled form control. This ensures consistent visual feedback across the entire click target area.
+## 2024-09-02 - Use CSS :has() for Contextual Label Styling
+**Learning:** Utilizing the CSS `:has()` pseudo-class allows for dynamic styling of associated labels or parent containers when a child form control is disabled (e.g., `.container:has(select:disabled) label`), eliminating the need for complex JavaScript state synchronization to maintain consistent UI feedback. Additionally, active labels often lack explicit `cursor: pointer` styling, making them feel non-interactive.
+**Action:** Use `:has()` to apply `cursor: not-allowed` and appropriate opacity to the labels of disabled controls to provide unified visual feedback across the entire interaction target. Always explicitly add `cursor: pointer` to active form labels to reinforce their clickability.
+
+## 2026-07-03 - Prevent Layout Jitter with Tabular Numbers
+**Learning:** When displaying dynamic numbers that update frequently upon user interaction (such as a live readout for a range slider), varying character widths in standard fonts cause the layout to jitter or shift continuously. This creates a visually distracting and unpolished experience.
+**Action:** Apply `font-variant-numeric: tabular-nums;` to any text element (like an `<output>`) that displays rapidly changing digits. This forces all numbers to use uniform widths, keeping the layout perfectly stable during updates.
+
+## 2024-09-10 - Disable Data-Dependent Controls Until Data Loads
+**Learning:** When UI controls (like Min/Max range sliders) depend entirely on the loaded dataset, allowing users to interact with them before data is loaded results in a confusing experience, as the values will be immediately overwritten.
+**Action:** Always disable strictly data-dependent controls by default in the HTML, and provide an explanatory `title` (e.g., "Upload a dataset to adjust"). Enable them dynamically via JavaScript only after the data has successfully loaded and bounds are calculated.
+
+## 2024-10-25 - Improve Batch Action Transparency
+**Learning:** When a button triggers a batch action (like downloading multiple files) rather than a single action, users can feel hesitant if the scope isn't explicitly clear. A generic "Download" label on a UI that manages multiple datasets doesn't communicate whether it downloads the currently viewed dataset or all of them.
+**Action:** Dynamically update the button text and tooltip to include the batch scope and count (e.g., "Download All (5)") when multiple items are loaded. This clarifies the action, sets correct expectations, and serves as a passive confirmation that the user's bulk upload was successful.

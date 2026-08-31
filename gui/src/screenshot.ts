@@ -196,15 +196,16 @@ export async function captureAllScreenshots(
   originalHeight: number,
   originalPixelRatio: number
 ) {
-  const originalText = downloadBtn.textContent;
+  const textSpan = downloadBtn.querySelector('span');
+  const originalText = textSpan ? textSpan.textContent : '';
 
   // Get selected resolution (multiply by 10 to get actual pixels: 100->1000, 150->1500, 300->3000)
   const targetSize = parseInt(dpiSelect.value) * 10;
 
   try {
     downloadBtn.classList.add('loading');
-    downloadBtn.textContent = 'Capturing...';
-    downloadBtn.disabled = true;
+    if (textSpan) textSpan.textContent = 'Capturing...';
+    downloadBtn.setAttribute('aria-disabled', 'true');
 
     // Set pixel ratio to 1 for consistent output size
     config.renderer.setPixelRatio(1);
@@ -264,7 +265,9 @@ export async function captureAllScreenshots(
 
     for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
-      downloadBtn.textContent = `Capturing ${i + 1}/${total}...`;
+      const progress = (i / total) * 100;
+      downloadBtn.style.setProperty('--progress', `${progress}%`);
+      if (textSpan) textSpan.textContent = `Capturing ${i + 1}/${total}...`;
 
       if (pair.pred) {
         // === PAIRED FILES: Capture both and merge ===
@@ -324,7 +327,8 @@ export async function captureAllScreenshots(
       }
     }
 
-    downloadBtn.textContent = 'Creating ZIP...';
+    downloadBtn.style.setProperty('--progress', `100%`);
+    if (textSpan) textSpan.textContent = 'Creating ZIP...';
 
     // Generate and download ZIP
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -335,11 +339,12 @@ export async function captureAllScreenshots(
     config.renderer.setSize(originalWidth, originalHeight, false);
     config.zoomToFit();
 
-    downloadBtn.textContent = '✓ Downloaded!';
+    if (textSpan) textSpan.textContent = '✓ Downloaded!';
+    downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.textContent = originalText;
-      downloadBtn.disabled = false;
-      downloadBtn.classList.remove('loading');
+      if (textSpan) textSpan.textContent = originalText;
+      downloadBtn.removeAttribute('aria-disabled');
+      downloadBtn.style.removeProperty('--progress');
     }, 2000);
 
   } catch (error) {
@@ -350,21 +355,41 @@ export async function captureAllScreenshots(
     config.renderer.setSize(originalWidth, originalHeight, false);
     config.zoomToFit();
 
-    downloadBtn.textContent = '✗ Failed';
+    if (textSpan) textSpan.textContent = '✗ Failed';
+    downloadBtn.classList.remove('loading');
     setTimeout(() => {
-      downloadBtn.textContent = originalText;
-      downloadBtn.disabled = false;
-      downloadBtn.classList.remove('loading');
+      if (textSpan) textSpan.textContent = originalText;
+      downloadBtn.removeAttribute('aria-disabled');
+      downloadBtn.style.removeProperty('--progress');
     }, 2000);
   }
 }
 
 export function updateDownloadButton(downloadBtn: HTMLButtonElement, datasetCount: number) {
   const isDisabled = datasetCount === 0;
-  downloadBtn.disabled = isDisabled;
+
+  if (isDisabled) {
+    downloadBtn.setAttribute('aria-disabled', 'true');
+    downloadBtn.removeAttribute('disabled');
+  } else {
+    downloadBtn.removeAttribute('aria-disabled');
+    downloadBtn.removeAttribute('disabled');
+  }
+
   downloadBtn.title = isDisabled
     ? 'Upload a dataset to enable downloads'
-    : 'Download screenshots';
+    : datasetCount > 1
+      ? 'Download screenshots for all datasets as a ZIP'
+      : 'Download screenshots';
+
+  const textSpan = downloadBtn.querySelector('span');
+  if (textSpan) {
+    if (datasetCount > 1) {
+      textSpan.textContent = `All (${datasetCount})`;
+    } else {
+      textSpan.textContent = 'Download';
+    }
+  }
 
   const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement | null;
   if (dpiSelect) {

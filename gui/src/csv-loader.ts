@@ -6,16 +6,24 @@ export interface SensorDataPoint {
   z: number;
   val: number;
   h: number;
+  /** In-plane velocity components (m/s) from the optional U_x/U_y/U_z columns —
+   *  what the particle-flow overlay advects along. Absent in older exports. */
+  u?: number;
+  v?: number;
+  w?: number;
 }
 
 export class CSVLoader {
   private loadedDatasets = new Map<string, SensorDataPoint[]>();
   private onUpdateUI: () => void;
+  private onError?: (msg: string) => void;
 
   constructor(
-    onUpdateUI: () => void
+    onUpdateUI: () => void,
+    onError?: (msg: string) => void
   ) {
     this.onUpdateUI = onUpdateUI;
+    this.onError = onError;
   }
 
   processCSVData(text: string, name: string) {
@@ -39,6 +47,7 @@ export class CSVLoader {
 
       if (headerLine.length === 0) {
         console.error('CSV is empty');
+        this.onError?.(`Error: The file "${name}" is empty or invalid.`);
         return;
       }
 
@@ -56,6 +65,7 @@ export class CSVLoader {
 
       if (xIdx === -1 || yIdx === -1 || zIdx === -1) {
         console.error('Missing columns in CSV:', { xIdx, yIdx, zIdx });
+        this.onError?.(`Error: The file "${name}" is missing required columns (x, y, z).`);
         return;
       }
 
@@ -224,12 +234,13 @@ export function updateResultsDropdown(
     select.innerHTML = '';
   }
 
-  datasetNames.forEach((key) => {
+  for (let i = 0; i < datasetNames.length; i++) {
+    const key = datasetNames[i];
     const option = document.createElement('option');
     option.value = key;
     option.text = key;
     select.appendChild(option);
-  });
+  }
 
   const isDisabled = datasetNames.length === 0;
   select.disabled = isDisabled;
@@ -242,9 +253,12 @@ export function updateResultsDropdown(
 
 export function handleFileUpload(
   files: FileList | null,
-  processCSV: (text: string, name: string) => void
+  processCSV: (text: string, name: string) => void,
+  onError?: (msg: string) => void
 ) {
   if (!files) return;
+
+  const invalidFiles: string[] = [];
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -255,6 +269,16 @@ export function handleFileUpload(
         processCSV(text, file.name);
       };
       reader.readAsText(file);
+    } else {
+      invalidFiles.push(file.name);
+    }
+  }
+
+  if (invalidFiles.length > 0 && onError) {
+    if (invalidFiles.length === 1) {
+      onError(`Unsupported file type: "${invalidFiles[0]}". Please upload .csv files.`);
+    } else {
+      onError(`Unsupported file types: ${invalidFiles.length} files ignored. Please upload .csv files.`);
     }
   }
 }

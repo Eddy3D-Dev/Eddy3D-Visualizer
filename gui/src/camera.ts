@@ -33,13 +33,18 @@ export function setupCameras(
 
   let activeCamera: THREE.Camera = orthographicCamera;
 
+  renderer.domElement.tabIndex = 0;
+  renderer.domElement.setAttribute('aria-label', 'Interactive 3D Canvas. Use arrow keys to pan, and press R to reset the view.');
+  renderer.domElement.setAttribute('role', 'img');
+
   const controls = new OrbitControls(activeCamera, renderer.domElement);
   controls.enableDamping = true;
   controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: THREE.MOUSE.ROTATE
+    RIGHT: THREE.MOUSE.PAN
   };
+  controls.listenToKeyEvents(renderer.domElement);
 
   return {
     perspectiveCamera,
@@ -70,8 +75,9 @@ export function switchCamera(
   newControls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.PAN,
-    RIGHT: THREE.MOUSE.ROTATE
+    RIGHT: THREE.MOUSE.PAN
   };
+  newControls.listenToKeyEvents(renderer.domElement);
   newControls.target.copy(oldTarget);
   cameras.activeCamera.position.copy(oldCamPos);
   newControls.update();

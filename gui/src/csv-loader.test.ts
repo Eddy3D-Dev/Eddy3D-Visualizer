@@ -5,7 +5,8 @@ import { CSVLoader, updateResultsDropdown, handleFileUpload } from './csv-loader
 
 function makeLoader() {
   const onUpdate = vi.fn();
-  return { loader: new CSVLoader(onUpdate), onUpdate };
+  const onError = vi.fn();
+  return { loader: new CSVLoader(onUpdate, onError), onUpdate, onError };
 }
 
 const SIMPLE_CSV = `x,y,z,mag_u,bldg_height
@@ -67,17 +68,19 @@ describe('CSVLoader', () => {
 
     it('rejects CSV missing required x/y/z columns', () => {
       const csv = 'a,b,c\n1,2,3';
-      const { loader, onUpdate } = makeLoader();
+      const { loader, onUpdate, onError } = makeLoader();
       loader.processCSVData(csv, 'bad.csv');
       expect(loader.hasDataset('bad.csv')).toBe(false);
       expect(onUpdate).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('Error: The file "bad.csv" is missing required columns (x, y, z).');
     });
 
     it('handles empty CSV gracefully', () => {
-      const { loader, onUpdate } = makeLoader();
+      const { loader, onUpdate, onError } = makeLoader();
       loader.processCSVData('', 'empty.csv');
       expect(loader.hasDataset('empty.csv')).toBe(false);
       expect(onUpdate).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith('Error: The file "empty.csv" is empty or invalid.');
     });
 
     it('defaults val to 0 when mag_u column is absent', () => {
@@ -303,7 +306,7 @@ describe('handleFileUpload', () => {
     expect(cb).toHaveBeenCalledWith(csvContent, 'test.csv');
   });
 
-  it('ignores non-csv files', async () => {
+  it('ignores non-csv files and calls onError if provided', async () => {
     const file = new File(['hello'], 'readme.txt', { type: 'text/plain' });
     const fileList = {
       length: 1,
@@ -313,8 +316,28 @@ describe('handleFileUpload', () => {
     } as unknown as FileList;
 
     const cb = vi.fn();
-    handleFileUpload(fileList, cb);
+    const errCb = vi.fn();
+    handleFileUpload(fileList, cb, errCb);
     await new Promise((r) => setTimeout(r, 50));
     expect(cb).not.toHaveBeenCalled();
+    expect(errCb).toHaveBeenCalledWith('Unsupported file type: "readme.txt". Please upload .csv files.');
+  });
+
+  it('calls onError with multiple files message when multiple invalid files are uploaded', async () => {
+    const file1 = new File(['hello'], 'readme.txt', { type: 'text/plain' });
+    const file2 = new File(['world'], 'data.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const fileList = {
+      length: 2,
+      item: (i: number) => (i === 0 ? file1 : i === 1 ? file2 : null),
+      0: file1,
+      1: file2
+    } as unknown as FileList;
+
+    const cb = vi.fn();
+    const errCb = vi.fn();
+    handleFileUpload(fileList, cb, errCb);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(cb).not.toHaveBeenCalled();
+    expect(errCb).toHaveBeenCalledWith('Unsupported file types: 2 files ignored. Please upload .csv files.');
   });
 });

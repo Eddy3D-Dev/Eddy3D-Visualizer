@@ -15,6 +15,14 @@ if (versionBadge) {
 }
 import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
+import {
+  buildVelocityGrid,
+  createParticleFlow,
+  datasetHasVectors,
+  type ParticleFlow,
+  type VelocityGrid,
+} from './particles';
+import { createGpuParticleFlow } from './particles-gpu';
 import { setupCameras, switchCamera, zoomToFit, updateCameraOnResize } from './camera';
 import { 
   captureAllScreenshots, 
@@ -44,6 +52,13 @@ renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Accessibility: Make canvas focusable for keyboard controls (OrbitControls)
+renderer.domElement.id = 'webgl-canvas';
+renderer.domElement.tabIndex = 0;
+renderer.domElement.setAttribute('role', 'img');
+renderer.domElement.setAttribute('aria-label', 'Interactive 3D Scene. Use arrow keys to pan, or press R to reset the view.');
+
 canvasContainer.appendChild(renderer.domElement);
 
 // Setup cameras
@@ -56,6 +71,19 @@ let sensorPoints: THREE.Points | null = null;
 let fixedSensorPoints: THREE.InstancedMesh | null = null;
 let buildingVoxels: THREE.InstancedMesh | null = null;
 let edgesVoxels: THREE.LineSegments | null = null;
+let particleFlow: ParticleFlow | null = null;
+/**
+ * What the USER asked for, which is not the same as what the active dataset can do.
+ * Kept separate so a dataset that cannot support particles disables the control without
+ * destroying the choice, and so the choice — not the momentarily-unchecked checkbox — is
+ * what gets persisted.
+ */
+let particlesRequested = false;
+/** The active dataset's flow field, or null when it has none. Built once per dataset. */
+let activeVelocityGrid: VelocityGrid | null = null;
+/** Particles run only when the user asked AND the dataset can carry them. */
+const particlesActive = () => particlesRequested && activeVelocityGrid !== null;
+const particleClock = new THREE.Clock();
 let activeSensorData: SensorDataPoint[] = [];
 let dataMin = 0;
 let dataMax = 1;
@@ -82,6 +110,8 @@ interface PersistedViewSettings {
   gaplessPoints: boolean;
   rotateToCamera: boolean;
   colormap: ColormapName;
+  particles: boolean;
+  flowSpeed: number;
 }
 
 function getManualPointSize(): number {
@@ -285,7 +315,12 @@ function persistViewSettings() {
     pointSize: Number.isFinite(pointSizeValue) ? pointSizeValue : DEFAULT_POINT_SIZE,
     gaplessPoints: gaplessToggle?.checked ?? true,
     rotateToCamera: rotateToCameraToggle?.checked ?? false,
-    colormap: savedColormap
+    colormap: savedColormap,
+    // The request, NOT the live checkbox: the checkbox is unchecked while a dataset that
+    // cannot support particles is displayed, and persisting that would let any unrelated
+    // control change silently discard the user's setting.
+    particles: particlesRequested,
+    flowSpeed: getFlowSpeedMultiplier()
   };
 
   try {
@@ -400,6 +435,19 @@ function applyPersistedViewSettings() {
     updatePointSizeDisplay(DEFAULT_POINT_SIZE);
   }
 
+  if (typeof saved.particles === 'boolean') {
+    // Into the REQUEST; updateParticleControls decides whether the active dataset can
+    // honour it and sets the checkbox accordingly.
+    particlesRequested = saved.particles;
+  }
+  const flowSpeedSlider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  if (flowSpeedSlider && typeof saved.flowSpeed === 'number' && Number.isFinite(saved.flowSpeed)) {
+    const clamped = Math.min(parseFloat(flowSpeedSlider.max), Math.max(parseFloat(flowSpeedSlider.min), saved.flowSpeed));
+    flowSpeedSlider.value = clamped.toString();
+    const flowDisplay = document.getElementById('flow-speed-display');
+    if (flowDisplay) flowDisplay.textContent = clamped.toFixed(1);
+  }
+
   gaplessPointSizingEnabled = gaplessToggle?.checked ?? true;
   rotatePointsToCameraEnabled = rotateToCameraToggle?.checked ?? false;
   gridHelper.visible = gridToggle?.checked ?? false;
@@ -441,14 +489,102 @@ const csvLoader = new CSVLoader(
     updateResultsDropdownUI();
     updateDownloadButtonUI();
     updateEmptyStateUI();
-  }
+  },
+  (msg) => showToast(msg, true)
 );
+
+export function showToast(message: string, isError = false) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${isError ? 'toast-error' : ''}`;
+
+  // Accessibility enhancements
+  toast.setAttribute('role', isError ? 'alert' : 'status');
+  toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+
+  // Visual enhancement: Icon
+  const iconWrapper = document.createElement('span');
+  iconWrapper.className = 'toast-icon';
+  iconWrapper.setAttribute('aria-hidden', 'true');
+
+  // Inject SVG depending on type
+  if (isError) {
+    // Alert/Warning icon
+    iconWrapper.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+  } else {
+    // Info icon
+    iconWrapper.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+  }
+
+  // Text container
+  const textSpan = document.createElement('span');
+  textSpan.textContent = message;
+  textSpan.className = 'toast-message';
+
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.setAttribute('aria-label', 'Close notification');
+  closeBtn.title = 'Close notification';
+  closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+  const removeToast = () => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  };
+
+  closeBtn.addEventListener('click', removeToast);
+
+  toast.appendChild(iconWrapper);
+  toast.appendChild(textSpan);
+  toast.appendChild(closeBtn);
+
+  container.appendChild(toast);
+
+  let timeoutId = setTimeout(removeToast, 4000);
+
+  const pauseTimer = () => clearTimeout(timeoutId);
+  const resumeTimer = () => {
+    clearTimeout(timeoutId); // Ensure we don't start multiple timers
+    timeoutId = setTimeout(removeToast, 4000);
+  };
+
+  // Pause timer on hover/focus for better accessibility
+  toast.addEventListener('mouseenter', pauseTimer);
+  toast.addEventListener('focusin', pauseTimer);
+
+  // Resume timer when interaction ceases
+  toast.addEventListener('mouseleave', resumeTimer);
+  toast.addEventListener('focusout', resumeTimer);
+}
 
 function updateEmptyStateUI() {
   const emptyState = document.getElementById('empty-state');
-  if (emptyState) {
+  const canvasContainer = document.getElementById('canvas-container');
+  if (emptyState && canvasContainer) {
     const hasData = csvLoader.getDatasetCount() > 0;
+
+    // Check if the currently focused element is inside the empty state before hiding it
+    const emptyStateHasFocus = emptyState.contains(document.activeElement);
+
     emptyState.style.display = hasData ? 'none' : 'flex';
+    if (hasData) {
+      canvasContainer.classList.add('has-data');
+
+      // If focus was inside the empty state, move it to the canvas itself to prevent focus drop to body and instantly enable keyboard controls
+      if (emptyStateHasFocus) {
+        renderer.domElement.focus();
+      }
+    } else {
+      canvasContainer.classList.remove('has-data');
+    }
   }
 }
 
@@ -481,6 +617,13 @@ function renderDataset(name: string) {
   if (!data) return;
 
   activeSensorData = data;
+
+  // Update document title for better wayfinding and screen reader context
+  if (name === PLACEHOLDER_FILENAME) {
+    document.title = 'Eddy3D Visualiser';
+  } else {
+    document.title = `${name} - Eddy3D Visualiser`;
+  }
 
   // Calculate Min/Max for this dataset
   let referenceData = data;
@@ -522,11 +665,19 @@ function renderDataset(name: string) {
     minSlider.max = sliderMax.toString();
     minSlider.step = step.toString();
     minSlider.value = "0";
+    minSlider.disabled = false;
+    minSlider.title = "Set the minimum value for the colormap scale";
+    const minWrapper = minSlider.closest('.toggle-item');
+    if (minWrapper) minWrapper.setAttribute('title', "Set the minimum value for the colormap scale");
 
     maxSlider.min = sliderMin.toString();
     maxSlider.max = sliderMax.toString();
     maxSlider.step = step.toString();
     maxSlider.value = "1";
+    maxSlider.disabled = false;
+    maxSlider.title = "Set the maximum value for the colormap scale";
+    const maxWrapper = maxSlider.closest('.toggle-item');
+    if (maxWrapper) maxWrapper.setAttribute('title', "Set the maximum value for the colormap scale");
 
     userMin = 0;
     userMax = 1;
@@ -705,6 +856,9 @@ function renderDataset(name: string) {
   if (topViewToggle?.checked) {
     applyTopViewMode(true);
   }
+
+  updateParticleControls();
+  rebuildParticleFlow();
 }
 
 function createBuildingEdges(validBuildings: SensorDataPoint[]) {
@@ -844,6 +998,129 @@ function updateSensorColors(mapName: ColormapName) {
   }
 }
 
+// --- Particle flow (animated wind particles over the velocity field) ---
+
+/**
+ * Whether particles CAN run on the active dataset, and why not when they cannot.
+ *
+ * Carrying U_x/U_y is necessary but not sufficient: buildVelocityGrid also refuses a
+ * single probe transect (it needs two rows to interpolate across), a dataset whose
+ * sampled cells all sit inside building footprints, and a field that averages to a dead
+ * stop. Gating the toggle on the vectors alone left it switched ON with nothing drawn
+ * and nothing said — the same "quietly degraded looks exactly like working" state the
+ * GPU/CPU badge exists to prevent, one step earlier.
+ */
+function describeParticleSupport(): { grid: VelocityGrid | null; reason: string } {
+  if (activeSensorData.length === 0) return { grid: null, reason: 'Upload a dataset first' };
+  if (!datasetHasVectors(activeSensorData)) {
+    return {
+      grid: null,
+      reason: 'Particles unavailable: this dataset is missing the U_x/U_y velocity fields. '
+        + 'Re-export from Grasshopper with the current Export to Visualizer component, '
+        + 'which writes them.',
+    };
+  }
+  const grid = buildVelocityGrid(activeSensorData, sensorGridStep);
+  if (!grid) {
+    return {
+      grid: null,
+      reason: 'This dataset has velocity vectors but no usable flow field — the points do not '
+        + 'form a grid at least two rows deep, or every sampled cell is inside a building.',
+    };
+  }
+  return { grid, reason: 'Animate wind particles through the velocity field' };
+}
+
+/**
+ * Re-derives the control state for the active dataset. The user's REQUEST
+ * (`particlesRequested`) survives a dataset that cannot honour it: the checkbox is
+ * rebuilt from the request each time, so switching to a legacy CSV and back restores the
+ * animation instead of silently discarding the choice — and, because the request rather
+ * than the live checkbox is what gets persisted, an unrelated control change while a
+ * legacy CSV is displayed no longer overwrites it.
+ */
+function updateParticleControls() {
+  const control = document.getElementById('particles-control');
+  const toggle = document.getElementById('particles') as HTMLInputElement | null;
+  const { grid, reason } = describeParticleSupport();
+  activeVelocityGrid = grid;
+  const supported = grid !== null;
+
+  if (toggle) {
+    toggle.disabled = !supported;
+    toggle.checked = supported && particlesRequested;
+  }
+  if (control) {
+    control.classList.toggle('disabled', !supported);
+    control.setAttribute('title', reason);
+    toggle?.setAttribute('title', reason);
+  }
+  updateFlowSpeedControlState();
+}
+
+function updateFlowSpeedControlState() {
+  const control = document.getElementById('flow-speed-control');
+  const slider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  const active = particlesActive();
+  if (slider) slider.disabled = !active;
+  if (control) {
+    control.classList.toggle('disabled', !active);
+    control.setAttribute('title', active
+      ? 'Animation pace multiplier (1 = default)'
+      : "Enable 'Particles' to adjust the animation pace");
+  }
+}
+
+function getFlowSpeedMultiplier(): number {
+  const slider = document.getElementById('flow-speed') as HTMLInputElement | null;
+  const v = slider ? parseFloat(slider.value) : 1;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/**
+ * (Re)creates the particle system for the active dataset — one grid binning pass, then
+ * the GPU integrator, falling back to the CPU one on a device without float render
+ * targets. Which backend won is reported on the control, never assumed.
+ */
+function rebuildParticleFlow() {
+  if (particleFlow) {
+    scene.remove(particleFlow.object);
+    particleFlow.dispose();
+    particleFlow = null;
+  }
+  updateParticleBackendLabel(null);
+  // The grid was already built (and its absence already explained on the control) by
+  // updateParticleControls, so there is no second, silent refusal hiding here.
+  const grid = activeVelocityGrid;
+  if (!particlesActive() || !grid) return;
+
+  particleFlow = createGpuParticleFlow(grid, renderer) ?? createParticleFlow(grid);
+  scene.add(particleFlow.object);
+  updateParticleBackendLabel(particleFlow);
+  particleClock.getDelta(); // swallow the idle time so the first step is a normal frame
+}
+
+/**
+ * Says which integrator is running, next to the toggle. Not decoration: a GPU path that
+ * quietly degraded to the CPU one is indistinguishable from a working GPU path, so the
+ * fact is surfaced where a user (and the browser check) can read it.
+ */
+function updateParticleBackendLabel(flow: ParticleFlow | null) {
+  const badge = document.getElementById('particles-backend');
+  if (!badge) return;
+  if (!flow) {
+    badge.textContent = '';
+    badge.removeAttribute('data-backend');
+    return;
+  }
+  badge.textContent = flow.backend === 'gpu' ? 'GPU' : 'CPU';
+  badge.setAttribute('data-backend', flow.backend);
+  badge.title = flow.backend === 'gpu'
+    ? `${flow.particleCount.toLocaleString()} particles advected on the GPU`
+    : `${flow.particleCount.toLocaleString()} particles advected on the CPU `
+      + '(this device has no float render targets for the GPU path)';
+}
+
 // UI Event Listeners
 document.getElementById('auto-rotate')?.addEventListener('change', (e) => {
   controls.autoRotate = (e.target as HTMLInputElement).checked;
@@ -896,6 +1173,20 @@ document.getElementById('results-select')?.addEventListener('change', (e) => {
   renderDataset(name);
 });
 
+document.getElementById('particles')?.addEventListener('change', (e) => {
+  particlesRequested = (e.target as HTMLInputElement).checked;
+  updateFlowSpeedControlState();
+  rebuildParticleFlow();
+  persistViewSettings();
+});
+
+document.getElementById('flow-speed')?.addEventListener('input', (e) => {
+  const val = parseFloat((e.target as HTMLInputElement).value);
+  const display = document.getElementById('flow-speed-display');
+  if (display && Number.isFinite(val)) display.textContent = val.toFixed(1);
+  persistViewSettings();
+});
+
 document.getElementById('show-buildings')?.addEventListener('change', (e) => {
   if (buildingVoxels) {
     buildingVoxels.visible = (e.target as HTMLInputElement).checked;
@@ -923,32 +1214,39 @@ const handleFiles = (files: FileList | null) => {
       csvLoader.deleteDataset(PLACEHOLDER_FILENAME);
     }
     processCSVData(text, name);
-  });
+  }, (msg) => showToast(msg, true));
+};
+
+// Helper to clear input value after selection so the same file can be re-uploaded
+const handleFileInputChange = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  handleFiles(input.files);
+  input.value = ''; // Reset value to allow selecting the same file again
 };
 
 // CSV Upload Listener
-document.getElementById('csv-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('csv-upload')?.addEventListener('change', handleFileInputChange);
 
-document.getElementById('empty-csv-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('empty-csv-upload')?.addEventListener('change', handleFileInputChange);
 
 // Drag and Drop Logic
 let dragCounter = 0;
 window.addEventListener('dragover', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
   canvasContainer.classList.add('drag-over');
 });
 
 window.addEventListener('dragenter', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
   dragCounter++;
   canvasContainer.classList.add('drag-over');
 });
 
 window.addEventListener('dragleave', (e) => {
+  if (!e.dataTransfer?.types.includes('Files')) return;
   e.preventDefault();
   dragCounter--;
   if (dragCounter === 0) {
@@ -966,13 +1264,9 @@ window.addEventListener('drop', (e) => {
   }
 });
 
-document.getElementById('folder-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('folder-upload')?.addEventListener('change', handleFileInputChange);
 
-document.getElementById('empty-folder-upload')?.addEventListener('change', (e) => {
-  handleFiles((e.target as HTMLInputElement).files);
-});
+document.getElementById('empty-folder-upload')?.addEventListener('change', handleFileInputChange);
 
 // Resize handle
 window.addEventListener('resize', () => {
@@ -991,6 +1285,20 @@ function animate() {
   requestAnimationFrame(animate);
   if (gaplessPointSizingEnabled && rotatePointsToCameraEnabled && sensorPoints) {
     applyPointSize();
+  }
+  if (particleFlow) {
+    // Contained: the overlay must never take the camera and the render loop down with
+    // it. An uncaught throw here would end animate() itself — frozen particles AND dead
+    // orbit controls, which reads as "the whole app broke" when only the overlay did.
+    try {
+      particleFlow.step(particleClock.getDelta(), getFlowSpeedMultiplier());
+    } catch (err) {
+      console.error('Eddy3D: particle overlay failed and was removed —', err);
+      scene.remove(particleFlow.object);
+      try { particleFlow.dispose(); } catch { /* already broken */ }
+      particleFlow = null;
+      updateParticleBackendLabel(null);
+    }
   }
   controls.update();
   renderer.render(scene, activeCamera);
@@ -1062,12 +1370,13 @@ document.getElementById('colormap-max')?.addEventListener('input', updateRange);
 document.getElementById('advanced-toggle')?.addEventListener('click', function (this: HTMLElement) {
   const content = document.getElementById('advanced-content');
   if (content) {
-    const isHidden = content.style.display === 'none';
-    content.style.display = isHidden ? 'block' : 'none';
+    const isHidden = !content.classList.contains('open');
+    content.classList.toggle('open');
     this.classList.toggle('active', isHidden);
     this.setAttribute('aria-expanded', String(isHidden));
-    this.setAttribute('title', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
-    this.setAttribute('aria-label', isHidden ? 'Hide advanced settings' : 'Show advanced settings');
+    const label = isHidden ? 'Hide advanced settings' : 'Show advanced settings';
+    this.setAttribute('title', label);
+    this.setAttribute('aria-label', label);
   }
 });
 
@@ -1086,20 +1395,35 @@ menuToggle?.addEventListener('click', () => {
 
 applyPersistedViewSettings();
 
-// Close sidebar when clicking outside
-canvasContainer.addEventListener('click', () => {
+const closeSidebar = (returnFocus = false) => {
   if (uiContainer?.classList.contains('sidebar-open')) {
     menuToggle?.classList.remove('open');
     uiContainer.classList.remove('sidebar-open');
     menuToggle?.setAttribute('aria-expanded', 'false');
     menuToggle?.setAttribute('title', 'Open Sidebar');
     menuToggle?.setAttribute('aria-label', 'Open Sidebar');
+    if (returnFocus) menuToggle?.focus();
+  }
+};
+
+// Close sidebar when clicking outside
+canvasContainer.addEventListener('click', () => closeSidebar(false));
+
+// Close sidebar on Escape key and handle R shortcut
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeSidebar(true);
+  } else if (e.key === 'r' || e.key === 'R') {
+    if (document.activeElement?.tagName === 'INPUT' && (document.activeElement as HTMLInputElement).type !== 'range') return;
+    zoomToFit({ perspectiveCamera, orthographicCamera, activeCamera, controls }, controls, canvasContainer, sensorPoints, buildingVoxels, directionalLight);
   }
 });
 
 // Screenshot download
 document.getElementById('download-screenshots')?.addEventListener('click', () => {
   const downloadBtn = document.getElementById('download-screenshots') as HTMLButtonElement;
+  if (downloadBtn.getAttribute('aria-disabled') === 'true') return;
+
   const dpiSelect = document.getElementById('dpi-select') as HTMLSelectElement;
   const originalWidth = canvasContainer.clientWidth;
   const originalHeight = canvasContainer.clientHeight;
