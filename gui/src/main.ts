@@ -13,7 +13,7 @@ if (versionBadge) {
     versionBadge.innerHTML = `<span class="version-label ${labelClass}">${version} · ${branchLabel}</span>`;
   }
 }
-import { getColormapLUT, LUT_SIZE, type ColormapName } from './colormaps';
+import { getColormapLUTLinear, LUT_SIZE, type ColormapName } from './colormaps';
 import { CSVLoader, updateResultsDropdown, handleFileUpload, type SensorDataPoint } from './csv-loader';
 import {
   buildVelocityGrid,
@@ -701,7 +701,8 @@ function renderDataset(name: string) {
   const mapName = (document.getElementById('colormap-select') as HTMLSelectElement)?.value || 'jet';
 
   // ⚡ Bolt Optimization: Look up the raw Float32Array LUT once to avoid instantiating/updating THREE.Color per point
-  const lut = getColormapLUT(mapName as ColormapName);
+  // Linear LUT: the renderer sRGB-encodes vertex/instance colours on output.
+  const lut = getColormapLUTLinear(mapName as ColormapName);
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
@@ -937,7 +938,7 @@ function updateSensorColors(mapName: ColormapName) {
   // Calling .setColorAt() in a tight loop creates massive overhead for 100k+ points
   const instanceColorArray = fixedSensorPoints?.instanceColor?.array as Float32Array | undefined;
 
-  const lut = getColormapLUT(mapName);
+  const lut = getColormapLUTLinear(mapName);
   const dataLen = activeSensorData.length;
   const valRange = userMax - userMin || 1;
 
