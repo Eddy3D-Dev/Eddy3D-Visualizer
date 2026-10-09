@@ -101,6 +101,30 @@ describe('turbo colormap matches the official Turbo LUT', () => {
   });
 });
 
+// ── Viridis/Magma/Inferno reference values ──────────────────────────────────
+// Entries of matplotlib's 256-entry tables at t = index / 255. Magma and inferno
+// share their dark end but split above the middle: pink → salmon → cream versus
+// red → orange → yellow.
+const MPL_REFERENCE: [name: 'viridis' | 'magma' | 'inferno', index: number, hex: string][] = [
+  ['viridis', 0, '#440154'], ['viridis', 64, '#3b528b'], ['viridis', 128, '#21918c'],
+  ['viridis', 192, '#5ec962'], ['viridis', 255, '#fde725'],
+  ['magma', 0, '#000004'], ['magma', 64, '#51127c'], ['magma', 128, '#b73779'],
+  ['magma', 192, '#fc8961'], ['magma', 255, '#fcfdbf'],
+  ['inferno', 0, '#000004'], ['inferno', 64, '#57106e'], ['inferno', 128, '#bc3754'],
+  ['inferno', 192, '#f98e09'], ['inferno', 255, '#fcffa4'],
+];
+const MPL_FNS = { viridis: getViridisColor, magma: getMagmaColor, inferno: getInfernoColor };
+
+describe("viridis/magma/inferno match matplotlib's tables", () => {
+  it.each(MPL_REFERENCE)('%s(%i / 255) ≈ %s', (name, index, hex) => {
+    expectColorNearHex(MPL_FNS[name](index / 255), hex);
+  });
+
+  it.each(MPL_REFERENCE)('%s via getColormapColor(%i / 255) ≈ %s', (name, index, hex) => {
+    expectColorNearHex(getColormapColor(index / 255, name), hex);
+  });
+});
+
 // ── Jet colormap (no internal clamping) ─────────────────────────────────────
 describe('jet colormap (unclamped)', () => {
   it('returns valid RGB at t=0', () => rgbIsFinite(getJetColor(0)));
