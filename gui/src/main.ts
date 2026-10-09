@@ -620,9 +620,9 @@ function renderDataset(name: string) {
 
   // Update document title for better wayfinding and screen reader context
   if (name === PLACEHOLDER_FILENAME) {
-    document.title = 'Eddy3D Visualiser';
+    document.title = 'Eddy3D Visualizer';
   } else {
-    document.title = `${name} - Eddy3D Visualiser`;
+    document.title = `${name} - Eddy3D Visualizer`;
   }
 
   // Calculate Min/Max for this dataset

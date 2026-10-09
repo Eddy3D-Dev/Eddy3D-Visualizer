@@ -13,20 +13,25 @@ import {
 import * as THREE from 'three';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-// Turbo uses a high-degree polynomial that can overshoot [0, 1] significantly
-// at boundaries (e.g. g ≈ 1.27 at t=1). We verify values are finite and
-// within a generous range rather than strictly clamped, since the source
-// implementation intentionally does not post-clamp the polynomial output.
 function rgbIsFinite(c: THREE.Color) {
   expect(Number.isFinite(c.r)).toBe(true);
   expect(Number.isFinite(c.g)).toBe(true);
   expect(Number.isFinite(c.b)).toBe(true);
 }
 
+// '#rrggbb' → 0–1 components, bypassing three.js colour management. The colormaps
+// write sRGB values with setRGB(), whose default colour space is the working space,
+// so they are stored and read back (.r/.g/.b) unconverted. new THREE.Color('#30123b')
+// would linearise the hex instead (0x30 → 0.03, not 0.19).
+function hexToRgb(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: ((n >> 16) & 0xff) / 255, g: ((n >> 8) & 0xff) / 255, b: (n & 0xff) / 255 };
+}
+
 const ALL_MAPS: ColormapName[] = ['turbo', 'jet', 'viridis', 'magma', 'inferno'];
 
 // ── Colormaps that clamp their input to [0, 1] ──────────────────────────────
-// turbo: clamps v internally; viridis/magma/inferno: stop-based with clamp.
+// turbo/viridis/magma/inferno: stop-based, clamped to the first/last stop.
 // jet: does NOT clamp input — tested separately.
 describe.each([
   { name: 'turbo', fn: getTurboColor },
@@ -63,6 +68,35 @@ describe.each([
   it('creates a new color when no target given', () => {
     const result = fn(0.5);
     expect(result).toBeInstanceOf(THREE.Color);
+  });
+});
+
+// ── Turbo reference values ──────────────────────────────────────────────────
+// Entries of Google's official 256-entry Turbo LUT (turbo_srgb_bytes) at
+// t = index / 255: dark blue → light blue → green → orange → dark red.
+const TURBO_REFERENCE: [index: number, hex: string][] = [
+  [0, '#30123b'],
+  [64, '#28bceb'],
+  [128, '#a4fc3c'],
+  [192, '#fb7e21'],
+  [255, '#7a0403'],
+];
+
+// Within 0.005 (~1/255) per channel.
+function expectColorNearHex(c: THREE.Color, hex: string) {
+  const e = hexToRgb(hex);
+  expect(c.r).toBeCloseTo(e.r, 2);
+  expect(c.g).toBeCloseTo(e.g, 2);
+  expect(c.b).toBeCloseTo(e.b, 2);
+}
+
+describe('turbo colormap matches the official Turbo LUT', () => {
+  it.each(TURBO_REFERENCE)('getTurboColor(%i / 255) ≈ %s', (index, hex) => {
+    expectColorNearHex(getTurboColor(index / 255), hex);
+  });
+
+  it.each(TURBO_REFERENCE)("getColormapColor(%i / 255, 'turbo') ≈ %s", (index, hex) => {
+    expectColorNearHex(getColormapColor(index / 255, 'turbo'), hex);
   });
 });
 
@@ -123,8 +157,8 @@ describe('getColormapLUT', () => {
     }
   });
 
-  it('stop-based LUT values (viridis/magma/inferno) are in [0, 1]', () => {
-    for (const name of ['viridis', 'magma', 'inferno'] as ColormapName[]) {
+  it('stop-based LUT values (turbo/viridis/magma/inferno) are in [0, 1]', () => {
+    for (const name of ['turbo', 'viridis', 'magma', 'inferno'] as ColormapName[]) {
       const lut = getColormapLUT(name);
       for (let i = 0; i < lut.length; i++) {
         expect(lut[i]).toBeGreaterThanOrEqual(0);

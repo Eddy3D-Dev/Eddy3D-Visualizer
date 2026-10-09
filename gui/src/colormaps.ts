@@ -2,17 +2,6 @@ import * as THREE from 'three';
 
 export type ColormapName = 'jet' | 'viridis' | 'magma' | 'inferno' | 'turbo';
 
-// Turbo Colormap implementation
-export function getTurboColor(v: number, target?: THREE.Color): THREE.Color {
-  const color = target || new THREE.Color();
-  v = Math.max(0, Math.min(1, v));
-  const r = 34.61 + v * (198.21 + v * (-564.48 + v * (3302.08 + v * (-9526.58 + v * (13728.54 + v * (-9312.39 + v * 2399.13))))));
-  const g = -1.37 + v * (233.19 + v * (757.44 + v * (-2346.73 + v * (3410.83 + v * (-2368.12 + v * (486.63 + v * 153.22))))));
-  const b = 27.2 + v * (370.19 + v * (3167.31 + v * (-28166.37 + v * (88786.17 + v * (-141662.1 + v * (116488.0 + v * (-36818.27)))))));
-  color.setRGB(r / 255, g / 255, b / 255);
-  return color;
-}
-
 export function getColormapLUT(mapName: ColormapName): Float32Array {
   let lut: Float32Array;
   if (mapName === lastMapName && lastLut) {
@@ -104,8 +93,67 @@ const infernoStops: ColorStop[] = [
 ];
 export function getInfernoColor(t: number, target?: THREE.Color) { return lerpColor(t, infernoStops, target); }
 
+// Turbo (Anton Mikhailov, Copyright 2019 Google LLC, Apache-2.0): every 5th entry of the official
+// 256-entry sRGB LUT (https://gist.github.com/mikhailov-work/6a308c20e494d9e0ccc29036b28faa7a),
+// at t = index / 255. Interpolating between them stays within 0.0026 (< 1/255) of the full table.
+const turboStops: ColorStop[] = [
+  { t: 0 / 255, r: 0.18995, g: 0.07176, b: 0.23217 },
+  { t: 5 / 255, r: 0.21291, g: 0.12947, b: 0.37314 },
+  { t: 10 / 255, r: 0.23236, g: 0.18603, b: 0.50004 },
+  { t: 15 / 255, r: 0.24830, g: 0.24143, b: 0.61286 },
+  { t: 20 / 255, r: 0.26074, g: 0.29568, b: 0.71162 },
+  { t: 25 / 255, r: 0.26967, g: 0.34878, b: 0.79631 },
+  { t: 30 / 255, r: 0.27509, g: 0.40072, b: 0.86692 },
+  { t: 35 / 255, r: 0.27701, g: 0.45152, b: 0.92347 },
+  { t: 40 / 255, r: 0.27543, g: 0.50115, b: 0.96594 },
+  { t: 45 / 255, r: 0.26878, g: 0.54995, b: 0.99303 },
+  { t: 50 / 255, r: 0.24946, g: 0.59943, b: 0.99835 },
+  { t: 55 / 255, r: 0.22039, g: 0.64901, b: 0.98436 },
+  { t: 60 / 255, r: 0.18625, g: 0.69775, b: 0.95498 },
+  { t: 65 / 255, r: 0.15173, g: 0.74472, b: 0.91416 },
+  { t: 70 / 255, r: 0.12151, g: 0.78896, b: 0.86581 },
+  { t: 75 / 255, r: 0.10026, g: 0.82955, b: 0.81389 },
+  { t: 80 / 255, r: 0.09267, g: 0.86554, b: 0.76230 },
+  { t: 85 / 255, r: 0.10342, g: 0.89600, b: 0.71500 },
+  { t: 90 / 255, r: 0.13526, g: 0.92197, b: 0.66556 },
+  { t: 95 / 255, r: 0.18491, g: 0.94484, b: 0.60713 },
+  { t: 100 / 255, r: 0.24797, g: 0.96423, b: 0.54303 },
+  { t: 105 / 255, r: 0.32006, g: 0.97974, b: 0.47654 },
+  { t: 110 / 255, r: 0.39678, g: 0.99098, b: 0.41098 },
+  { t: 115 / 255, r: 0.47375, g: 0.99755, b: 0.34963 },
+  { t: 120 / 255, r: 0.54658, g: 0.99907, b: 0.29581 },
+  { t: 125 / 255, r: 0.61088, g: 0.99514, b: 0.25280 },
+  { t: 130 / 255, r: 0.66428, g: 0.98524, b: 0.22370 },
+  { t: 135 / 255, r: 0.71577, g: 0.96875, b: 0.20815 },
+  { t: 140 / 255, r: 0.76608, g: 0.94627, b: 0.20311 },
+  { t: 145 / 255, r: 0.81410, g: 0.91861, b: 0.20552 },
+  { t: 150 / 255, r: 0.85868, g: 0.88655, b: 0.21230 },
+  { t: 155 / 255, r: 0.89870, g: 0.85087, b: 0.22038 },
+  { t: 160 / 255, r: 0.93301, g: 0.81236, b: 0.22667 },
+  { t: 165 / 255, r: 0.96049, g: 0.77181, b: 0.22811 },
+  { t: 170 / 255, r: 0.98000, g: 0.73000, b: 0.22161 },
+  { t: 175 / 255, r: 0.99163, g: 0.68408, b: 0.20706 },
+  { t: 180 / 255, r: 0.99654, g: 0.63193, b: 0.18738 },
+  { t: 185 / 255, r: 0.99517, g: 0.57549, b: 0.16412 },
+  { t: 190 / 255, r: 0.98799, g: 0.51667, b: 0.13883 },
+  { t: 195 / 255, r: 0.97545, g: 0.45740, b: 0.11305 },
+  { t: 200 / 255, r: 0.95801, g: 0.39958, b: 0.08831 },
+  { t: 205 / 255, r: 0.93612, g: 0.34513, b: 0.06616 },
+  { t: 210 / 255, r: 0.91024, g: 0.29599, b: 0.04814 },
+  { t: 215 / 255, r: 0.88066, g: 0.25334, b: 0.03521 },
+  { t: 220 / 255, r: 0.84662, g: 0.21407, b: 0.02487 },
+  { t: 225 / 255, r: 0.80799, g: 0.17753, b: 0.01660 },
+  { t: 230 / 255, r: 0.76476, g: 0.14374, b: 0.01041 },
+  { t: 235 / 255, r: 0.71692, g: 0.11268, b: 0.00629 },
+  { t: 240 / 255, r: 0.66449, g: 0.08436, b: 0.00424 },
+  { t: 245 / 255, r: 0.60746, g: 0.05878, b: 0.00427 },
+  { t: 250 / 255, r: 0.54583, g: 0.03593, b: 0.00638 },
+  { t: 255 / 255, r: 0.47960, g: 0.01583, b: 0.01055 }
+];
+export function getTurboColor(v: number, target?: THREE.Color): THREE.Color { return lerpColor(v, turboStops, target); }
+
 // ⚡ Bolt Optimization: Cache colormaps in a Look-Up Table (LUT)
-// This avoids expensive polynomial evaluations and linear interpolation on every pixel/point.
+// This avoids re-running the stop search and interpolation on every pixel/point.
 export const LUT_SIZE = 1024;
 const colormapCache = new Map<ColormapName, Float32Array>();
 let lastMapName: ColormapName | null = null;

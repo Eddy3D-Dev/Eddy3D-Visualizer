@@ -20,111 +20,104 @@ export interface ScreenshotConfig {
 
 // Helper: Position camera for Top View with tight zoom
 export function setCameraTopView(config: ScreenshotConfig): Promise<void> {
-  return new Promise((resolve) => {
-    const { renderer, cameras, controls, sensorPoints, buildingVoxels } = config;
-    const box = new THREE.Box3();
-    if (sensorPoints) box.expandByObject(sensorPoints);
-    if (buildingVoxels) box.expandByObject(buildingVoxels);
+  const { renderer, cameras, controls, sensorPoints, buildingVoxels } = config;
+  const box = new THREE.Box3();
+  if (sensorPoints) box.expandByObject(sensorPoints);
+  if (buildingVoxels) box.expandByObject(buildingVoxels);
 
-    if (!box.isEmpty()) {
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxZ = Math.max(size.z, 10);
+  if (!box.isEmpty()) {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxZ = Math.max(size.z, 10);
 
-      // Position camera directly above, looking down
-      cameras.activeCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
+    // Position camera directly above, looking down
+    cameras.activeCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
+    cameras.activeCamera.lookAt(center);
+    cameras.activeCamera.up.set(0, 0, 1);
+    controls.target.copy(center);
+    controls.enableRotate = false;
+    controls.update();
+
+    // Tight zoom: use actual scene width/height for orthographic bounds
+    const aspect = renderer.domElement.width / renderer.domElement.height;
+    const sceneWidth = size.x;
+    const sceneHeight = size.y;
+    const padding = 1.2; // 20% padding
+
+    // Determine which dimension to fit
+    const fitWidth = sceneWidth / aspect;
+    const fitHeight = sceneHeight;
+    const fitDim = Math.max(fitWidth, fitHeight) * padding;
+
+    cameras.orthographicCamera.left = -fitDim * aspect / 2;
+    cameras.orthographicCamera.right = fitDim * aspect / 2;
+    cameras.orthographicCamera.top = fitDim / 2;
+    cameras.orthographicCamera.bottom = -fitDim / 2;
+    cameras.orthographicCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
+    cameras.orthographicCamera.lookAt(center);
+    cameras.orthographicCamera.updateProjectionMatrix();
+
+    // Also update perspective camera if that's active
+    if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
+      const dist = Math.max(sceneWidth, sceneHeight) * 1.2;
+      cameras.perspectiveCamera.aspect = aspect;
+      cameras.activeCamera.position.set(center.x, center.y - 0.001, center.z + dist);
       cameras.activeCamera.lookAt(center);
-      cameras.activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-      controls.enableRotate = false;
-      controls.update();
-
-      // Tight zoom: use actual scene width/height for orthographic bounds
-      const aspect = renderer.domElement.width / renderer.domElement.height;
-      const sceneWidth = size.x;
-      const sceneHeight = size.y;
-      const padding = 1.2; // 20% padding
-
-      // Determine which dimension to fit
-      const fitWidth = sceneWidth / aspect;
-      const fitHeight = sceneHeight;
-      const fitDim = Math.max(fitWidth, fitHeight) * padding;
-
-      cameras.orthographicCamera.left = -fitDim * aspect / 2;
-      cameras.orthographicCamera.right = fitDim * aspect / 2;
-      cameras.orthographicCamera.top = fitDim / 2;
-      cameras.orthographicCamera.bottom = -fitDim / 2;
-      cameras.orthographicCamera.position.set(center.x, center.y - 0.001, center.z + maxZ * 3);
-      cameras.orthographicCamera.lookAt(center);
-      cameras.orthographicCamera.updateProjectionMatrix();
-
-      // Also update perspective camera if that's active
-      if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
-        const dist = Math.max(sceneWidth, sceneHeight) * 1.2;
-        cameras.perspectiveCamera.aspect = aspect;
-        cameras.activeCamera.position.set(center.x, center.y - 0.001, center.z + dist);
-        cameras.activeCamera.lookAt(center);
-        cameras.activeCamera.updateProjectionMatrix();
-      }
+      cameras.activeCamera.updateProjectionMatrix();
     }
+  }
 
-    // Wait for render to complete
-    requestAnimationFrame(() => {
-      renderer.render(config.cameras.activeCamera.userData.scene || new THREE.Scene(), config.cameras.activeCamera);
-      resolve();
-    });
-  });
+  // Must NOT wait on requestAnimationFrame here: browsers stop firing rAF on
+  // hidden/occluded pages, which left the export frozen at "Capturing N/M..."
+  // whenever the tab was backgrounded mid-capture. No frame is needed anyway —
+  // captureScreenshot() renders synchronously right before reading the canvas.
+  return Promise.resolve();
 }
 
 // Helper: Position camera for Perspective (Isometric) View with tight zoom
 export function setCameraPerspective(config: ScreenshotConfig): Promise<void> {
-  return new Promise((resolve) => {
-    const { renderer, cameras, controls, sensorPoints, buildingVoxels } = config;
-    const box = new THREE.Box3();
-    if (sensorPoints) box.expandByObject(sensorPoints);
-    if (buildingVoxels) box.expandByObject(buildingVoxels);
+  const { renderer, cameras, controls, sensorPoints, buildingVoxels } = config;
+  const box = new THREE.Box3();
+  if (sensorPoints) box.expandByObject(sensorPoints);
+  if (buildingVoxels) box.expandByObject(buildingVoxels);
 
-    if (!box.isEmpty()) {
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
+  if (!box.isEmpty()) {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
 
-      // Use half of maxDim for tighter framing in isometric view
-      const sceneSize = Math.max(size.x, size.y) * 0.5;
+    // Use half of maxDim for tighter framing in isometric view
+    const sceneSize = Math.max(size.x, size.y) * 0.5;
 
-      // Position camera at isometric angle - closer
-      const dist = sceneSize * 1.5;
-      cameras.activeCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
-      cameras.activeCamera.lookAt(center);
-      cameras.activeCamera.up.set(0, 0, 1);
-      controls.target.copy(center);
-      controls.enableRotate = true;
-      controls.update();
+    // Position camera at isometric angle - closer
+    const dist = sceneSize * 1.5;
+    cameras.activeCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
+    cameras.activeCamera.lookAt(center);
+    cameras.activeCamera.up.set(0, 0, 1);
+    controls.target.copy(center);
+    controls.enableRotate = true;
+    controls.update();
 
-      // Tight zoom for orthographic camera - use sceneSize not maxDim
-      const aspect = renderer.domElement.width / renderer.domElement.height;
-      const padding = 1.2; // 20% padding
+    // Tight zoom for orthographic camera - use sceneSize not maxDim
+    const aspect = renderer.domElement.width / renderer.domElement.height;
+    const padding = 1.2; // 20% padding
 
-      cameras.orthographicCamera.left = -sceneSize * aspect * padding;
-      cameras.orthographicCamera.right = sceneSize * aspect * padding;
-      cameras.orthographicCamera.top = sceneSize * padding;
-      cameras.orthographicCamera.bottom = -sceneSize * padding;
-      cameras.orthographicCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
-      cameras.orthographicCamera.lookAt(center);
-      cameras.orthographicCamera.updateProjectionMatrix();
+    cameras.orthographicCamera.left = -sceneSize * aspect * padding;
+    cameras.orthographicCamera.right = sceneSize * aspect * padding;
+    cameras.orthographicCamera.top = sceneSize * padding;
+    cameras.orthographicCamera.bottom = -sceneSize * padding;
+    cameras.orthographicCamera.position.set(center.x - dist, center.y - dist, center.z + dist * 0.7);
+    cameras.orthographicCamera.lookAt(center);
+    cameras.orthographicCamera.updateProjectionMatrix();
 
-      // Also update perspective camera
-      if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
-        cameras.perspectiveCamera.aspect = aspect;
-        cameras.activeCamera.updateProjectionMatrix();
-      }
+    // Also update perspective camera
+    if (cameras.activeCamera instanceof THREE.PerspectiveCamera) {
+      cameras.perspectiveCamera.aspect = aspect;
+      cameras.activeCamera.updateProjectionMatrix();
     }
+  }
 
-    // Wait for render to complete
-    requestAnimationFrame(() => {
-      renderer.render(config.cameras.activeCamera.userData.scene || new THREE.Scene(), config.cameras.activeCamera);
-      resolve();
-    });
-  });
+  // Must NOT wait on requestAnimationFrame here — see setCameraTopView.
+  return Promise.resolve();
 }
 
 // Helper: Capture current canvas as blob
