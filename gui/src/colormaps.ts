@@ -2,6 +2,10 @@ import * as THREE from 'three';
 
 export type ColormapName = 'jet' | 'viridis' | 'magma' | 'inferno' | 'turbo';
 
+/**
+ * The colormap as display-referred sRGB: the colours as they should appear on screen.
+ * Not for GPU colour buffers — use getColormapLUTLinear for those.
+ */
 export function getColormapLUT(mapName: ColormapName): Float32Array {
   let lut: Float32Array;
   if (mapName === lastMapName && lastLut) {
@@ -175,6 +179,32 @@ function generateLUT(mapName: ColormapName): Float32Array {
     lut[i * 3] = c.r;
     lut[i * 3 + 1] = c.g;
     lut[i * 3 + 2] = c.b;
+  }
+  return lut;
+}
+
+const linearColormapCache = new Map<ColormapName, Float32Array>();
+
+/**
+ * getColormapLUT converted to three's linear working colour space, for writing straight
+ * into BufferGeometry `color` attributes and InstancedMesh.instanceColor. The built-in
+ * materials sRGB-encode every fragment on output (colorspace_fragment), which turns these
+ * back into the colormap's own colours; the sRGB LUT written raw would be encoded twice
+ * and render washed out (Turbo t=0 #30123b as #794c84).
+ */
+export function getColormapLUTLinear(mapName: ColormapName): Float32Array {
+  let lut = linearColormapCache.get(mapName);
+  if (!lut) {
+    const srgb = getColormapLUT(mapName);
+    lut = new Float32Array(srgb.length);
+    const color = new THREE.Color();
+    for (let i = 0; i < srgb.length; i += 3) {
+      color.setRGB(srgb[i], srgb[i + 1], srgb[i + 2], THREE.SRGBColorSpace);
+      lut[i] = color.r;
+      lut[i + 1] = color.g;
+      lut[i + 2] = color.b;
+    }
+    linearColormapCache.set(mapName, lut);
   }
   return lut;
 }
