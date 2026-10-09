@@ -6,6 +6,7 @@ import {
   getMagmaColor,
   getInfernoColor,
   getColormapLUT,
+  getColormapLUTLinear,
   getColormapColor,
   LUT_SIZE,
   type ColormapName,
@@ -165,6 +166,58 @@ describe('getColormapLUT', () => {
         expect(lut[i]).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+// ── Linear LUT for GPU colour buffers ───────────────────────────────────────
+// three treats vertex/instance colours as linear and sRGB-encodes them on output
+// (colorspace_fragment). Encoding the linear LUT the same way must give back the sRGB
+// colormap; the sRGB LUT written in raw is encoded twice and renders washed out.
+describe('getColormapLUTLinear', () => {
+  it.each(ALL_MAPS)('sRGB-encodes back to the %s LUT', (name) => {
+    const srgb = getColormapLUT(name);
+    const linear = getColormapLUTLinear(name);
+    expect(linear).toBeInstanceOf(Float32Array);
+    expect(linear.length).toBe(LUT_SIZE * 3);
+
+    const c = new THREE.Color();
+    const out = { r: 0, g: 0, b: 0 };
+    let maxErr = 0;
+    for (let i = 0; i < linear.length; i += 3) {
+      c.setRGB(linear[i], linear[i + 1], linear[i + 2]).getRGB(out, THREE.SRGBColorSpace);
+      maxErr = Math.max(maxErr, Math.abs(out.r - srgb[i]), Math.abs(out.g - srgb[i + 1]), Math.abs(out.b - srgb[i + 2]));
+    }
+    expect(maxErr).toBeLessThan(1e-5);
+  });
+
+  // getHexString() converts linear → sRGB and rounds to bytes, as the renderer does.
+  it.each<[index: number, hex: string]>([
+    [0, '30123b'],
+    [LUT_SIZE - 1, '7a0403'],
+  ])('turbo entry %i renders as #%s', (index, hex) => {
+    const lut = getColormapLUTLinear('turbo');
+    const i3 = index * 3;
+    expect(new THREE.Color(lut[i3], lut[i3 + 1], lut[i3 + 2]).getHexString()).toBe(hex);
+  });
+
+  it.each(TURBO_REFERENCE)('turbo at %i / 255 renders within ~1/255 of %s', (index, hex) => {
+    const lut = getColormapLUTLinear('turbo');
+    const i3 = Math.floor((index / 255) * (LUT_SIZE - 1)) * 3;
+    const displayed = new THREE.Color();
+    new THREE.Color(lut[i3], lut[i3 + 1], lut[i3 + 2]).getRGB(displayed, THREE.SRGBColorSpace);
+    expectColorNearHex(displayed, hex);
+  });
+
+  it('holds linear values, not the sRGB table', () => {
+    // Turbo t=0 is #30123b: red 0.19 in sRGB, 0.030 linear.
+    expect(getColormapLUT('turbo')[0]).toBeCloseTo(0.19, 2);
+    expect(getColormapLUTLinear('turbo')[0]).toBeCloseTo(0.030, 3);
+  });
+
+  it('is cached per colormap and never aliases the sRGB LUT', () => {
+    expect(getColormapLUTLinear('viridis')).toBe(getColormapLUTLinear('viridis'));
+    expect(getColormapLUTLinear('viridis')).not.toBe(getColormapLUTLinear('magma'));
+    expect(getColormapLUTLinear('turbo')).not.toBe(getColormapLUT('turbo'));
   });
 });
 

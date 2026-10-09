@@ -151,12 +151,16 @@ void main() {
 }
 `;
 
+// uColor is a THREE.Color, i.e. linear working space. colorspace_fragment encodes it for
+// the canvas exactly as the CPU backend's PointsMaterial/LineBasicMaterial do; without it
+// any colour but white would come out darker on the GPU path than on the CPU one.
 const HEAD_FRAGMENT = /* glsl */ `
 uniform vec3 uColor;
 uniform float uOpacity;
 
 void main() {
   gl_FragColor = vec4(uColor, uOpacity);
+  #include <colorspace_fragment>
 }
 `;
 
@@ -197,6 +201,7 @@ varying float vFade;
 
 void main() {
   gl_FragColor = vec4(uColor, uOpacity * vFade);
+  #include <colorspace_fragment>
 }
 `;
 
